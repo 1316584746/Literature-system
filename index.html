@@ -45,7 +45,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 py-8">
-    <!-- 第一行操作栏 -->
     <section class="bg-white rounded-lg p-6 card-shadow mb-6">
       <div class="grid md:grid-cols-4 gap-6 items-center">
         <div>
@@ -78,12 +77,10 @@
       <div id="tipBox" class="mt-4 hidden py-2 px-3 rounded"></div>
     </section>
 
-    <!-- 文献列表区域 -->
     <section class="bg-white rounded-lg p-6 card-shadow">
       <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div class="flex items-center gap-4">
           <h2 class="font-bold text-hospitalText text-lg">科室文献总库 <span id="totalNum" class="text-hospitalBlue">(0篇)</span></h2>
-          <!-- 分页每页条数选择 -->
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-600">每页显示：</span>
             <select id="pageSizeSelect" class="border border-gray-300 rounded px-2 py-1 text-sm">
@@ -93,7 +90,6 @@
               <option value="100">100条</option>
             </select>
           </div>
-          <!-- 批量打开选中文献（下载PDF） -->
           <button onclick="batchOpenSelectedDocs()" class="bg-hospitalBlue text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
             <i class="fa-solid fa-download mr-1"></i>批量下载选中文献
           </button>
@@ -104,19 +100,21 @@
         <table class="w-full border-collapse text-sm w-full">
           <thead class="bg-hospitalLight">
             <tr>
-              <th class="border border-gray-200 px-3 py-2 w-[5%] text-center">
+              <th class="border border-gray-200 px-3 py-2 w-[4%] text-center">
                 <input type="checkbox" id="checkAll" class="cursor-pointer">
               </th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[12%]">唯一ID</th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[43%]">文献标题 Title</th>
-              <th class="border border-gray-200 px-3 py-2 w-[15%]">第一作者</th>
-              <th class="border border-gray-200 px-3 py-2 w-[15%]">外部链接</th>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[9%]">唯一ID</th>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[13%]">DOI</th>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[10%]">PMID</th>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[34%]">文献标题 Title</th>
+              <th class="border border-gray-200 px-3 py-2 w-[10%]">第一作者</th>
+              <th class="border border-gray-200 px-3 py-2 w-[10%]">外部链接</th>
               <th class="border border-gray-200 px-3 py-2 w-[10%] text-center">操作</th>
             </tr>
           </thead>
           <tbody id="tableBody">
             <tr>
-              <td colspan="6" class="text-center py-10 text-gray-400">
+              <td colspan="8" class="text-center py-10 text-gray-400">
                 <i class="fa-solid fa-folder-open text-3xl block mb-2"></i>暂无文献，请上传Excel文件
               </td>
             </tr>
@@ -124,7 +122,6 @@
         </table>
       </div>
 
-      <!-- 分页控件 -->
       <div class="flex justify-center items-center mt-4 gap-3" id="paginationBox">
         <button id="prevPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">上一页</button>
         <span id="pageInfo" class="text-sm text-gray-600">第 1 页</span>
@@ -144,7 +141,7 @@
     let currentPage = 1;
     let pageSize = 10;
 
-    // 完整50列表头（匹配你的原始Excel模板）
+    // 完整50列表头
     const TEMPLATE_HEADERS = [
       'Final_FT_retrieval_order','original_order','unique_record_id','source_databases',
       'source_database_count','crossdb_dedup_method','PMID','PMCID','DOI',
@@ -172,7 +169,7 @@
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    // 页面初始化读取本地缓存
+    // 初始化
     window.onload = function () {
       const cacheData = localStorage.getItem(STORAGE_KEY);
       if (cacheData) {
@@ -188,9 +185,18 @@
       checkAll.addEventListener('change', toggleAllCheck);
       prevPage.addEventListener('click', ()=>{currentPage--; renderTable()});
       nextPage.addEventListener('click', ()=>{currentPage++; renderTable()});
+
+      // 事件委托绑定下载按钮
+      tableBody.addEventListener('click', function(e){
+        const btn = e.target.closest('.download-btn');
+        if(btn){
+          const rid = btn.dataset.id;
+          downloadLibDocById(rid);
+        }
+      })
     }
 
-    // Excel导入解析+自动去重
+    // Excel导入+去重（新增读取PMID、DOI字段）
     excelFileDom.addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -204,6 +210,8 @@
           const rawData = XLSX.utils.sheet_to_json(sheet);
           const newBatch = rawData.map(item => ({
             id: item.unique_record_id || '无',
+            doi: item.DOI || '',
+            pmid: item.PMID || '',
             title: item.Title || '无标题',
             author: item.First_Author || '未知作者',
             url: item.Identifier_URLs || ''
@@ -227,10 +235,9 @@
       reader.readAsArrayBuffer(file);
     })
 
-    // 搜索框实时筛选
     searchDom.addEventListener('input', ()=>{currentPage=1; renderTable()});
 
-    // 渲染分页表格
+    // 渲染表格（新增PMID列）
     function renderTable() {
       selectedIds.clear();
       checkAll.checked = false;
@@ -249,7 +256,7 @@
       pageInfo.textContent = `第${currentPage}/${totalPage}页`;
 
       if(filterData.length === 0){
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400">${literatureList.length ===0?'文献库为空，请上传Excel':'未匹配到对应标题文献'}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-400">${literatureList.length ===0?'文献库为空，请上传Excel':'未匹配到对应标题文献'}</td></tr>`;
         return;
       }
 
@@ -261,13 +268,15 @@
             <input type="checkbox" class="row-check cursor-pointer" data-id="${row.id}">
           </td>
           <td class="border border-gray-200 px-3 py-2">${row.id}</td>
+          <td class="border border-gray-200 px-3 py-2 text-blue-600 break-all">${row.doi || '-'}</td>
+          <td class="border border-gray-200 px-3 py-2 text-green-600">${row.pmid || '-'}</td>
           <td class="border border-gray-200 px-3 py-2">${row.title}</td>
           <td class="border border-gray-200 px-3 py-2">${row.author}</td>
           <td class="border border-gray-200 px-3 break-all py-2 text-blue-600">
             ${row.url ? `<a href="${row.url}" target="_blank">外链</a>` : '无'}
           </td>
           <td class="border border-gray-200 px-3 py-2 text-center">
-            <button onclick="downloadLibDoc('${JSON.stringify(row).replace(/'/g, "\\'")}')" class="bg-hospitalBlue text-white btn-normal">
+            <button class="download-btn bg-hospitalBlue text-white btn-normal" data-id="${row.id}">
               <i class="fa-solid fa-download mr-1"></i>下载文献
             </button>
           </td>
@@ -275,7 +284,6 @@
         tableBody.appendChild(tr);
       })
 
-      // 单行勾选事件绑定
       document.querySelectorAll('.row-check').forEach(ck=>{
         ck.onchange = function(){
           const rid = this.dataset.id;
@@ -285,7 +293,6 @@
       })
     }
 
-    // 全选/取消全选
     function toggleAllCheck(){
       const allRowCheck = document.querySelectorAll('.row-check');
       allRowCheck.forEach(ck=> ck.checked = checkAll.checked);
@@ -296,27 +303,51 @@
       }
     }
 
-    // ========== 修复：单篇下载文献（修正变量名错误，解决点击无反应）==========
-    window.downloadLibDoc = function (rawStr) {
+    // ===== 核心：按指定优先级 DOI → PMID → 标题 → 外链 =====
+    function downloadLibDocById(id){
+      const data = literatureList.find(item => item.id === id);
+      if(!data) return;
       try{
-        const data = JSON.parse(rawStr);
-        const linkUrl = data.url;
         let targetUrl = '';
-        // 优先打开外链，无外链跳转图书馆检索
-        if(linkUrl && linkUrl.trim() !== '' && linkUrl !== '无'){
-          targetUrl = linkUrl;
-        }else{
-          const titleEncode = encodeURIComponent(data.title);
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
+        let searchType = '';
+
+        // 优先级1：DOI
+        if(data.doi && data.doi.toString().trim() !== ''){
+          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.doi)}`;
+          searchType = 'DOI检索';
         }
-        // 新开文献页面
+        // 优先级2：PMID
+        else if(data.pmid && data.pmid.toString().trim() !== ''){
+          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.pmid)}`;
+          searchType = 'PMID检索';
+        }
+        // 优先级3：标题
+        else if(data.title && data.title.trim() !== ''){
+          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.title)}`;
+          searchType = '标题检索';
+        }
+        // 优先级4：外链
+        else if(data.url && data.url.trim() !== '' && data.url !== '无'){
+          targetUrl = data.url;
+          searchType = '外链直达';
+        }
+        // 兜底：标题
+        else{
+          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.title)}`;
+          searchType = '标题检索';
+        }
+
         window.open(targetUrl, '_blank');
-        // 同步生成本地文献信息TXT备份
+
+        // 同步下载TXT备份
         const txtContent = `=====四川大学儿科睡眠科室文献存档=====
 唯一ID：${data.id}
+DOI：${data.doi || '无'}
+PMID：${data.pmid || '无'}
 第一作者：${data.author}
 文献标题：${data.title}
-文献直达链接：${data.url || "无链接"}
+外链：${data.url || "无"}
+本次检索方式：${searchType}
 四川大学图书馆：https://lib.scu.edu.cn`;
         const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
         const aDom = document.createElement('a');
@@ -327,41 +358,57 @@
         document.body.removeChild(aDom);
         URL.revokeObjectURL(aDom.href);
       }catch(e){
-        console.error('下载操作异常：',e);
+        console.error('下载异常：',e);
         showMsg('操作失败，请刷新页面重试', 'text-red-600 bg-red-5');
       }
     }
 
-    // ========== 新增：批量打开选中文献（下载PDF）==========
-    window.batchOpenSelectedDocs = function(){
+    // 批量下载（同样按 DOI → PMID → 标题 → 外链 优先级）
+    function batchOpenSelectedDocs(){
       if(selectedIds.size === 0){
         showMsg("请先勾选需要下载的文献", 'text-red-600 bg-red-5');
         return;
       }
       const selectedList = literatureList.filter(item => selectedIds.has(item.id));
-      const confirmOpen = confirm(`即将打开 ${selectedList.length} 个文献页面\n浏览器可能拦截弹窗，请点击地址栏右侧允许弹窗\n登录一次川大校园账号即可全部下载PDF`);
+      const confirmOpen = confirm(`即将打开 ${selectedList.length} 个文献页面\n检索优先级：DOI → PMID → 标题 → 外链\n浏览器可能拦截弹窗，请点击地址栏右侧允许弹窗\n登录一次川大校园账号即可全部下载PDF`);
       if(!confirmOpen) return;
 
       selectedList.forEach((item, index) => {
-        // 错开打开时间，避免浏览器全部拦截
         setTimeout(() => {
           let targetUrl = '';
-          if(item.url && item.url.trim() !== '' && item.url !== '无'){
+          // 优先级1：DOI
+          if(item.doi && item.doi.toString().trim() !== ''){
+            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.doi)}`;
+          }
+          // 优先级2：PMID
+          else if(item.pmid && item.pmid.toString().trim() !== ''){
+            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.pmid)}`;
+          }
+          // 优先级3：标题
+          else if(item.title && item.title.trim() !== ''){
+            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title)}`;
+          }
+          // 优先级4：外链
+          else if(item.url && item.url.trim() !== '' && item.url !== '无'){
             targetUrl = item.url;
-          }else{
+          }
+          // 兜底
+          else{
             targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title)}`;
           }
           window.open(targetUrl, '_blank');
-        }, index * 300); // 每300ms打开一个，降低拦截概率
+        }, index * 300);
       })
-      showMsg(`已批量打开 ${selectedList.length} 篇文献，请在新标签页下载PDF`, 'text-green-600 bg-green-5');
+      showMsg(`已批量打开 ${selectedList.length} 篇文献（DOI→PMID→标题→外链），请在新标签页下载PDF`, 'text-green-600 bg-green-5');
     }
 
-    // 下载完整50列标准导入模板
-    window.downloadTemplate = function () {
+    // 下载导入模板
+    function downloadTemplate() {
       const emptyRow = {};
       TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
       emptyRow.unique_record_id = '示例：DACT-00001';
+      emptyRow.DOI = '示例：10.1016/j.sleep.2024.01.001';
+      emptyRow.PMID = '示例：38000000';
       emptyRow.Title = '示例：填写文献完整标题';
       emptyRow.First_Author = '示例：第一作者姓名';
       emptyRow.Identifier_URLs = '示例：川大图书馆sfx文献链接';
@@ -372,14 +419,19 @@
       showMsg("模板下载成功，表头与系统标准模板完全一致", 'text-green-600 bg-green-5');
     }
 
-    // 导出全部文献Excel备份
-    window.batchExportAllExcel = function () {
+    // 批量导出全部Excel（包含DOI、PMID）
+    function batchExportAllExcel() {
       if (literatureList.length === 0) {
         showMsg("文献库暂无数据，无法批量导出", 'text-red-600 bg-red-5');
         return;
       }
       const exportArr = literatureList.map(item => ({
-        unique_record_id: item.id, Title: item.title, First_Author: item.author, Identifier_URLs: item.url
+        unique_record_id: item.id,
+        DOI: item.doi,
+        PMID: item.pmid,
+        Title: item.title,
+        First_Author: item.author,
+        Identifier_URLs: item.url
       }))
       const sheet = XLSX.utils.json_to_sheet(exportArr);
       const wb = XLSX.utils.book_new();
@@ -388,8 +440,8 @@
       showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-5');
     }
 
-    // 清空本地全部文献
-    window.clearAllData = function () {
+    // 清空数据
+    function clearAllData() {
       if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
         localStorage.removeItem(STORAGE_KEY);
         literatureList = [];
@@ -399,416 +451,6 @@
       }
     }
 
-    // 顶部提示消息
-    function showMsg(text, className) {
-      tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
-      tipBox.classList.remove('hidden');
-      setTimeout(() => tipBox.classList.add('hidden'), 4000);
-    }
-  </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>四川大学儿科睡眠科室文献管理系统</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            hospitalBlue: '#0066B3',
-            hospitalLight: '#E6F1FB',
-            hospitalGray: '#F4F7FA',
-            hospitalText: '#23374D'
-          },
-          fontFamily: {
-            medical: ['Microsoft YaHei', 'sans-serif']
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body { font-family: "Microsoft YaHei"; background: #F4F7FA; }
-    .card-shadow { box-shadow: 0 2px 12px rgba(0, 102, 179, 0.08); }
-    .table-hover tr:hover { background-color: #E6F1FB; transition: 0.2s; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background: #0066B3; border-radius: 3px; }
-    .btn-normal{@apply px-3 py-1 rounded text-xs whitespace-nowrap}
-  </style>
-</head>
-<body class="min-h-screen">
-  <header class="bg-hospitalBlue text-white px-6 py-4 shadow-md">
-    <div class="max-w-7xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <i class="fa-solid fa-hospital-user text-2xl"></i>
-        <h1 class="text-xl font-bold">四川大学儿科睡眠科室文献管理系统</h1>
-      </div>
-      <div class="text-sm opacity-9">科室共用｜上传自动去重｜本地永久存储</div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-4 py-8">
-    <!-- 第一行操作栏 -->
-    <section class="bg-white rounded-lg p-6 card-shadow mb-6">
-      <div class="grid md:grid-cols-4 gap-6 items-center">
-        <div>
-          <label class="block font-medium text-hospitalText mb-2">
-            <i class="fa-solid fa-file-excel text-green-600 mr-2"></i>导入文献Excel
-          </label>
-          <input type="file" id="excelFile" accept=".xlsx,.xls" class="border border-gray-300 rounded px-3 py-2 w-full">
-          <p class="text-xs text-gray-500 mt-1">依据unique_record_id自动去重，重复条目直接跳过</p>
-        </div>
-        <div>
-          <label class="block font-medium text-hospitalText mb-2">
-            <i class="fa-solid fa-magnifying-glass text-hospitalBlue mr-2"></i>标题模糊检索
-          </label>
-          <input id="searchInput" placeholder="输入文献标题任意关键词筛选..." class="border border-hospitalBlue rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-hospitalLight">
-        </div>
-        <div class="flex flex-col gap-2">
-          <button onclick="downloadTemplate()" class="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700">
-            <i class="fa-solid fa-file-down mr-2"></i>下载导入模板
-          </button>
-          <button onclick="batchExportAllExcel()" class="bg-indigo-500 text-white w-full py-2 rounded hover:bg-indigo-600">
-            <i class="fa-solid fa-file-excel mr-2"></i>批量导出全部Excel
-          </button>
-        </div>
-        <div class="flex items-end">
-          <button onclick="clearAllData()" class="bg-red-500 text-white w-full py-2 rounded hover:bg-red-600">
-            <i class="fa-solid fa-trash mr-2"></i>清空全部本地文献
-          </button>
-        </div>
-      </div>
-      <div id="tipBox" class="mt-4 hidden py-2 px-3 rounded"></div>
-    </section>
-
-    <!-- 文献列表区域 -->
-    <section class="bg-white rounded-lg p-6 card-shadow">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div class="flex items-center gap-4">
-          <h2 class="font-bold text-hospitalText text-lg">科室文献总库 <span id="totalNum" class="text-hospitalBlue">(0篇)</span></h2>
-          <!-- 分页每页条数选择 -->
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">每页显示：</span>
-            <select id="pageSizeSelect" class="border border-gray-300 rounded px-2 py-1 text-sm">
-              <option value="10">10条</option>
-              <option value="20">20条</option>
-              <option value="50">50条</option>
-              <option value="100">100条</option>
-            </select>
-          </div>
-          <!-- 批量打开选中文献（下载PDF） -->
-          <button onclick="batchOpenSelectedDocs()" class="bg-hospitalBlue text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-            <i class="fa-solid fa-download mr-1"></i>批量下载选中文献
-          </button>
-        </div>
-      </div>
-
-      <div class="overflow-x-auto table-hover">
-        <table class="w-full border-collapse text-sm w-full">
-          <thead class="bg-hospitalLight">
-            <tr>
-              <th class="border border-gray-200 px-3 py-2 w-[5%] text-center">
-                <input type="checkbox" id="checkAll" class="cursor-pointer">
-              </th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[12%]">唯一ID</th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[43%]">文献标题 Title</th>
-              <th class="border border-gray-200 px-3 py-2 w-[15%]">第一作者</th>
-              <th class="border border-gray-200 px-3 py-2 w-[15%]">外部链接</th>
-              <th class="border border-gray-200 px-3 py-2 w-[10%] text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr>
-              <td colspan="6" class="text-center py-10 text-gray-400">
-                <i class="fa-solid fa-folder-open text-3xl block mb-2"></i>暂无文献，请上传Excel文件
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 分页控件 -->
-      <div class="flex justify-center items-center mt-4 gap-3" id="paginationBox">
-        <button id="prevPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">上一页</button>
-        <span id="pageInfo" class="text-sm text-gray-600">第 1 页</span>
-        <button id="nextPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">下一页</button>
-      </div>
-    </section>
-  </main>
-
-  <footer class="mt-10 py-4 text-center text-gray-500 text-sm border-t">
-    对接四川大学图书馆 lib.scu.edu.cn | 无数据库纯静态系统 | Vercel免费部署
-  </footer>
-
-  <script>
-    const STORAGE_KEY = 'ped_dept_literature';
-    let literatureList = [];
-    let selectedIds = new Set();
-    let currentPage = 1;
-    let pageSize = 10;
-
-    // 完整50列表头（匹配你的原始Excel模板）
-    const TEMPLATE_HEADERS = [
-      'Final_FT_retrieval_order','original_order','unique_record_id','source_databases',
-      'source_database_count','crossdb_dedup_method','PMID','PMCID','DOI',
-      'Embase_Accession_Number','WoS_Accession_Number','Publication_Year','Title','Abstract',
-      'Journal','First_Author','Language','Publication_Types','Keywords',
-      'MeSH_or_Subject_Terms','Source_Search_IDs_or_Domains','Source_Domains_All',
-      'Inferred_Evidence_Domains_All','Primary_Evidence_Domain','Initial_Relevance_Priority',
-      'Identifier_URLs','Reviewer_A_decision','Reviewer_A_reason',
-      'Reviewer_A_Evidence_Unit_or_Notes','Reviewer_B_decision','Reviewer_B_reason',
-      'Reviewer_B_Evidence_Unit_or_Notes','three_class_agreement','binary_A','binary_B',
-      'binary_agreement','conflict_type','decision_pair','FT_priority','FT_priority_rank',
-      'FT_priority_label','Recommended_next_step','Final_TA_decision','Final_retrieve_decision',
-      'Final_TA_basis','Final_TA_rule_code','Final_TA_reason','Final_TA_confidence',
-      'Final_FT_priority_rank','Final_FT_priority_label'
-    ];
-
-    const excelFileDom = document.getElementById('excelFile');
-    const searchDom = document.getElementById('searchInput');
-    const tableBody = document.getElementById('tableBody');
-    const tipBox = document.getElementById('tipBox');
-    const totalNum = document.getElementById('totalNum');
-    const pageSizeSelect = document.getElementById('pageSizeSelect');
-    const checkAll = document.getElementById('checkAll');
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    const pageInfo = document.getElementById('pageInfo');
-
-    // 页面初始化读取本地缓存
-    window.onload = function () {
-      const cacheData = localStorage.getItem(STORAGE_KEY);
-      if (cacheData) {
-        literatureList = JSON.parse(cacheData);
-        renderTable();
-        showMsg(`成功加载本地文献库，共${literatureList.length}篇`, 'text-green-600 bg-green-5');
-      }
-      pageSizeSelect.addEventListener('change', () => {
-        pageSize = Number(pageSizeSelect.value);
-        currentPage = 1;
-        renderTable();
-      })
-      checkAll.addEventListener('change', toggleAllCheck);
-      prevPage.addEventListener('click', ()=>{currentPage--; renderTable()});
-      nextPage.addEventListener('click', ()=>{currentPage++; renderTable()});
-    }
-
-    // Excel导入解析+自动去重
-    excelFileDom.addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      showMsg('正在解析Excel，自动校验重复文献...', 'text-hospitalBlue bg-hospitalLight');
-      const reader = new FileReader();
-      reader.onload = function (ev) {
-        try {
-          const buffer = new Uint8Array(ev.target.result);
-          const workbook = XLSX.read(buffer, { type: 'array' });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rawData = XLSX.utils.sheet_to_json(sheet);
-          const newBatch = rawData.map(item => ({
-            id: item.unique_record_id || '无',
-            title: item.Title || '无标题',
-            author: item.First_Author || '未知作者',
-            url: item.Identifier_URLs || ''
-          }));
-          const existIdSet = new Set(literatureList.map(item => item.id));
-          let addNum = 0, skipNum = 0;
-          newBatch.forEach(item => {
-            if (!existIdSet.has(item.id)) {
-              literatureList.push(item); existIdSet.add(item.id); addNum++;
-            } else skipNum++;
-          })
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(literatureList));
-          showMsg(`导入完成：新增${addNum}篇，重复跳过${skipNum}篇，当前总库${literatureList.length}篇`, 'text-green-600 bg-green-5');
-          currentPage = 1;
-          renderTable();
-        } catch (err) {
-          showMsg('Excel解析失败，请检查表头是否匹配模板', 'text-red-600 bg-red-5');
-          console.error(err);
-        }
-      }
-      reader.readAsArrayBuffer(file);
-    })
-
-    // 搜索框实时筛选
-    searchDom.addEventListener('input', ()=>{currentPage=1; renderTable()});
-
-    // 渲染分页表格
-    function renderTable() {
-      selectedIds.clear();
-      checkAll.checked = false;
-      const keyword = searchDom.value.trim().toLowerCase();
-      const filterData = literatureList.filter(row => row.title.toLowerCase().includes(keyword));
-      totalNum.textContent = `(${filterData.length}篇)`;
-      tableBody.innerHTML = '';
-
-      const totalPage = Math.ceil(filterData.length / pageSize) || 1;
-      if(currentPage > totalPage) currentPage = totalPage;
-      const start = (currentPage - 1) * pageSize;
-      const pageData = filterData.slice(start, start + pageSize);
-
-      prevPage.disabled = currentPage <= 1;
-      nextPage.disabled = currentPage >= totalPage;
-      pageInfo.textContent = `第${currentPage}/${totalPage}页`;
-
-      if(filterData.length === 0){
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400">${literatureList.length ===0?'文献库为空，请上传Excel':'未匹配到对应标题文献'}</td></tr>`;
-        return;
-      }
-
-      pageData.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-gray-100';
-        tr.innerHTML = `
-          <td class="border border-gray-200 px-3 py-2 text-center">
-            <input type="checkbox" class="row-check cursor-pointer" data-id="${row.id}">
-          </td>
-          <td class="border border-gray-200 px-3 py-2">${row.id}</td>
-          <td class="border border-gray-200 px-3 py-2">${row.title}</td>
-          <td class="border border-gray-200 px-3 py-2">${row.author}</td>
-          <td class="border border-gray-200 px-3 break-all py-2 text-blue-600">
-            ${row.url ? `<a href="${row.url}" target="_blank">外链</a>` : '无'}
-          </td>
-          <td class="border border-gray-200 px-3 py-2 text-center">
-            <button onclick="downloadLibDoc('${JSON.stringify(row).replace(/'/g, "\\'")}')" class="bg-hospitalBlue text-white btn-normal">
-              <i class="fa-solid fa-download mr-1"></i>下载文献
-            </button>
-          </td>
-        `;
-        tableBody.appendChild(tr);
-      })
-
-      // 单行勾选事件绑定
-      document.querySelectorAll('.row-check').forEach(ck=>{
-        ck.onchange = function(){
-          const rid = this.dataset.id;
-          if(this.checked) selectedIds.add(rid);
-          else selectedIds.delete(rid);
-        }
-      })
-    }
-
-    // 全选/取消全选
-    function toggleAllCheck(){
-      const allRowCheck = document.querySelectorAll('.row-check');
-      allRowCheck.forEach(ck=> ck.checked = checkAll.checked);
-      if(checkAll.checked){
-        document.querySelectorAll('.row-check').forEach(item=>selectedIds.add(item.dataset.id))
-      }else{
-        selectedIds.clear();
-      }
-    }
-
-    // ========== 修复：单篇下载文献（修正变量名错误，解决点击无反应）==========
-    window.downloadLibDoc = function (rawStr) {
-      try{
-        const data = JSON.parse(rawStr);
-        const linkUrl = data.url;
-        let targetUrl = '';
-        // 优先打开外链，无外链跳转图书馆检索
-        if(linkUrl && linkUrl.trim() !== '' && linkUrl !== '无'){
-          targetUrl = linkUrl;
-        }else{
-          const titleEncode = encodeURIComponent(data.title);
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
-        }
-        // 新开文献页面
-        window.open(targetUrl, '_blank');
-        // 同步生成本地文献信息TXT备份
-        const txtContent = `=====四川大学儿科睡眠科室文献存档=====
-唯一ID：${data.id}
-第一作者：${data.author}
-文献标题：${data.title}
-文献直达链接：${data.url || "无链接"}
-四川大学图书馆：https://lib.scu.edu.cn`;
-        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-        const aDom = document.createElement('a');
-        aDom.href = URL.createObjectURL(blob);
-        aDom.download = `文献备份_${data.id}.txt`;
-        document.body.appendChild(aDom);
-        aDom.click();
-        document.body.removeChild(aDom);
-        URL.revokeObjectURL(aDom.href);
-      }catch(e){
-        console.error('下载操作异常：',e);
-        showMsg('操作失败，请刷新页面重试', 'text-red-600 bg-red-5');
-      }
-    }
-
-    // ========== 新增：批量打开选中文献（下载PDF）==========
-    window.batchOpenSelectedDocs = function(){
-      if(selectedIds.size === 0){
-        showMsg("请先勾选需要下载的文献", 'text-red-600 bg-red-5');
-        return;
-      }
-      const selectedList = literatureList.filter(item => selectedIds.has(item.id));
-      const confirmOpen = confirm(`即将打开 ${selectedList.length} 个文献页面\n浏览器可能拦截弹窗，请点击地址栏右侧允许弹窗\n登录一次川大校园账号即可全部下载PDF`);
-      if(!confirmOpen) return;
-
-      selectedList.forEach((item, index) => {
-        // 错开打开时间，避免浏览器全部拦截
-        setTimeout(() => {
-          let targetUrl = '';
-          if(item.url && item.url.trim() !== '' && item.url !== '无'){
-            targetUrl = item.url;
-          }else{
-            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title)}`;
-          }
-          window.open(targetUrl, '_blank');
-        }, index * 300); // 每300ms打开一个，降低拦截概率
-      })
-      showMsg(`已批量打开 ${selectedList.length} 篇文献，请在新标签页下载PDF`, 'text-green-600 bg-green-5');
-    }
-
-    // 下载完整50列标准导入模板
-    window.downloadTemplate = function () {
-      const emptyRow = {};
-      TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
-      emptyRow.unique_record_id = '示例：DACT-00001';
-      emptyRow.Title = '示例：填写文献完整标题';
-      emptyRow.First_Author = '示例：第一作者姓名';
-      emptyRow.Identifier_URLs = '示例：川大图书馆sfx文献链接';
-      const sheet = XLSX.utils.json_to_sheet([emptyRow], {header: TEMPLATE_HEADERS});
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, "导入模板");
-      XLSX.writeFile(wb, "文献导入模板.xlsx");
-      showMsg("模板下载成功，表头与系统标准模板完全一致", 'text-green-600 bg-green-5');
-    }
-
-    // 导出全部文献Excel备份
-    window.batchExportAllExcel = function () {
-      if (literatureList.length === 0) {
-        showMsg("文献库暂无数据，无法批量导出", 'text-red-600 bg-red-5');
-        return;
-      }
-      const exportArr = literatureList.map(item => ({
-        unique_record_id: item.id, Title: item.title, First_Author: item.author, Identifier_URLs: item.url
-      }))
-      const sheet = XLSX.utils.json_to_sheet(exportArr);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, "全部科室文献");
-      XLSX.writeFile(wb, "科室文献总库_备份.xlsx");
-      showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-5');
-    }
-
-    // 清空本地全部文献
-    window.clearAllData = function () {
-      if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
-        localStorage.removeItem(STORAGE_KEY);
-        literatureList = [];
-        currentPage = 1;
-        renderTable();
-        showMsg('本地文献库已全部清空', 'text-red-600 bg-red-5');
-      }
-    }
-
-    // 顶部提示消息
     function showMsg(text, className) {
       tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
       tipBox.classList.remove('hidden');

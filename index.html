@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>四川大学儿科睡眠科室文献管理系统</title>
+  <title>儿科睡眠科室文献管理系统</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,9 +38,8 @@
     <div class="max-w-7xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-hospital-user text-2xl"></i>
-        <h1 class="text-xl font-bold">四川大学儿科睡眠科室文献管理系统</h1>
+        <h1 class="text-xl font-bold">儿科睡眠科室文献管理系统</h1>
       </div>
-      <div class="text-sm opacity-9">科室共用｜上传自动去重｜本地永久存储</div>
     </div>
   </header>
 
@@ -144,7 +143,7 @@
     let currentPage = 1;
     let pageSize = 10;
 
-    // 完整50列表头（与你上传的模板完全一致）
+    // 完整50列表头（匹配你的原始Excel模板）
     const TEMPLATE_HEADERS = [
       'Final_FT_retrieval_order','original_order','unique_record_id','source_databases',
       'source_database_count','crossdb_dedup_method','PMID','PMCID','DOI',
@@ -172,7 +171,7 @@
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    // 初始化
+    // 页面初始化读取本地缓存
     window.onload = function () {
       const cacheData = localStorage.getItem(STORAGE_KEY);
       if (cacheData) {
@@ -190,7 +189,7 @@
       nextPage.addEventListener('click', ()=>{currentPage++; renderTable()});
     }
 
-    // Excel导入+去重
+    // Excel导入解析+自动去重
     excelFileDom.addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -227,6 +226,7 @@
       reader.readAsArrayBuffer(file);
     })
 
+    // 搜索框实时筛选
     searchDom.addEventListener('input', ()=>{currentPage=1; renderTable()});
 
     // 渲染分页表格
@@ -274,6 +274,7 @@
         tableBody.appendChild(tr);
       })
 
+      // 单行勾选事件绑定
       document.querySelectorAll('.row-check').forEach(ck=>{
         ck.onchange = function(){
           const rid = this.dataset.id;
@@ -283,6 +284,7 @@
       })
     }
 
+    // 全选/取消全选
     function toggleAllCheck(){
       const allRowCheck = document.querySelectorAll('.row-check');
       allRowCheck.forEach(ck=> ck.checked = checkAll.checked);
@@ -293,27 +295,44 @@
       }
     }
 
-    // 单行跳转川大图书馆下载
+    // 【核心修改：点击下载文献优先打开Identifier_URLs外链】
     window.downloadLibDoc = function (rawStr) {
-      const data = JSON.parse(rawStr);
-      const titleEncode = encodeURIComponent(data.title);
-      const libUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
-      window.open(libUrl, '_blank');
-      const content = `=====四川大学儿科睡眠科室文献存档=====
+      try{
+        const data = JSON.parse(rawStr);
+        const linkUrl = data.url;
+        // 判断是否存在文献外链
+        if(linkUrl && linkUrl !== '' && linkUrl !== '无'){
+          alert('正在打开文献直达链接，登录川大校园账号后可下载原文！');
+          window.open(link, '_blank');
+        }else{
+          // 无外链，跳转图书馆检索页面
+          alert('该文献无直达外链，将跳转图书馆检索页面查找原文');
+          const titleEncode = encodeURIComponent(data.title);
+          const libUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
+          window.open(libUrl, '_blank');
+        }
+        // 同步生成本地文献信息TXT备份
+        const txtContent = `=====四川大学儿科睡眠科室文献存档=====
 唯一ID：${data.id}
 第一作者：${data.author}
 文献标题：${data.title}
-外部链接：${data.url || "无链接"}
-图书馆地址：https://lib.scu.edu.cn`;
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const aTag = document.createElement('a');
-      aTag.href = URL.createObjectURL(blob);
-      aTag.download = `文献备份_${data.id}.txt`;
-      aTag.click();
-      URL.revokeObjectURL(aTag);
+文献直达链接：${data.url || "无链接"}
+四川大学图书馆：https://lib.scu.edu.cn`;
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+        const aDom = document.createElement('a');
+        aDom.href = URL.createObjectURL(blob);
+        aDom.download = `文献备份_${data.id}.txt`;
+        document.body.appendChild(aDom);
+        aDom.click();
+        document.body.removeChild(aDom);
+        URL.revokeObjectURL(aDom.href);
+      }catch(e){
+        console.error('下载操作异常：',e);
+        showMsg('操作失败，请刷新页面重试', 'text-red-600 bg-red-5');
+      }
     }
 
-    // 导出选中文献
+    // 批量导出选中的文献Excel
     window.exportSelectedRows = function(){
       if(selectedIds.size === 0){
         showMsg("请先勾选需要下载的文献", 'text-red-600 bg-red-5');
@@ -333,17 +352,14 @@
       showMsg(`成功导出选中${selectedList.length}条文献`, 'text-green-600 bg-green-5');
     }
 
-    // 下载完整50列空白模板（和你上传的模板完全一致）
+    // 下载完整50列标准导入模板
     window.downloadTemplate = function () {
-      // 生成空行对象，所有50列都有
       const emptyRow = {};
       TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
-      // 第一行示例数据填充核心字段
       emptyRow.unique_record_id = '示例：DACT-00001';
       emptyRow.Title = '示例：填写文献完整标题';
       emptyRow.First_Author = '示例：第一作者姓名';
-      emptyRow.Identifier_URLs = '示例：文献链接';
-
+      emptyRow.Identifier_URLs = '示例：川大图书馆sfx文献链接';
       const sheet = XLSX.utils.json_to_sheet([emptyRow], {header: TEMPLATE_HEADERS});
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, sheet, "导入模板");
@@ -351,7 +367,7 @@
       showMsg("模板下载成功，表头与系统标准模板完全一致", 'text-green-600 bg-green-5');
     }
 
-    // 导出全部文献
+    // 导出全部文献总库
     window.batchExportAllExcel = function () {
       if (literatureList.length === 0) {
         showMsg("文献库暂无数据，无法批量导出", 'text-red-600 bg-red-5');
@@ -367,7 +383,7 @@
       showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-5');
     }
 
-    // 清空数据
+    // 清空本地全部文献
     window.clearAllData = function () {
       if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
         localStorage.removeItem(STORAGE_KEY);
@@ -378,6 +394,7 @@
       }
     }
 
+    // 顶部提示消息
     function showMsg(text, className) {
       tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
       tipBox.classList.remove('hidden');

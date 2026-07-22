@@ -98,7 +98,6 @@
             <i class="fa-solid fa-file-excel mr-1"></i>批量下载选中文献
           </button>
         </div>
-        <span class="text-xs text-orange-500">【下载文献】跳转川大图书馆lib.scu.edu.cn，登录后可下载原文，登录勾选记住我免重复登录</span>
       </div>
 
       <div class="overflow-x-auto table-hover">
@@ -141,11 +140,27 @@
   <script>
     const STORAGE_KEY = 'ped_dept_literature';
     let literatureList = [];
-    let selectedIds = new Set(); // 存放勾选的文献id
+    let selectedIds = new Set();
     let currentPage = 1;
     let pageSize = 10;
 
-    // DOM元素
+    // 完整50列表头（与你上传的模板完全一致）
+    const TEMPLATE_HEADERS = [
+      'Final_FT_retrieval_order','original_order','unique_record_id','source_databases',
+      'source_database_count','crossdb_dedup_method','PMID','PMCID','DOI',
+      'Embase_Accession_Number','WoS_Accession_Number','Publication_Year','Title','Abstract',
+      'Journal','First_Author','Language','Publication_Types','Keywords',
+      'MeSH_or_Subject_Terms','Source_Search_IDs_or_Domains','Source_Domains_All',
+      'Inferred_Evidence_Domains_All','Primary_Evidence_Domain','Initial_Relevance_Priority',
+      'Identifier_URLs','Reviewer_A_decision','Reviewer_A_reason',
+      'Reviewer_A_Evidence_Unit_or_Notes','Reviewer_B_decision','Reviewer_B_reason',
+      'Reviewer_B_Evidence_Unit_or_Notes','three_class_agreement','binary_A','binary_B',
+      'binary_agreement','conflict_type','decision_pair','FT_priority','FT_priority_rank',
+      'FT_priority_label','Recommended_next_step','Final_TA_decision','Final_retrieve_decision',
+      'Final_TA_basis','Final_TA_rule_code','Final_TA_reason','Final_TA_confidence',
+      'Final_FT_priority_rank','Final_FT_priority_label'
+    ];
+
     const excelFileDom = document.getElementById('excelFile');
     const searchDom = document.getElementById('searchInput');
     const tableBody = document.getElementById('tableBody');
@@ -157,7 +172,7 @@
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    // 初始化读取本地数据
+    // 初始化
     window.onload = function () {
       const cacheData = localStorage.getItem(STORAGE_KEY);
       if (cacheData) {
@@ -165,17 +180,14 @@
         renderTable();
         showMsg(`成功加载本地文献库，共${literatureList.length}篇`, 'text-green-600 bg-green-5');
       }
-      // 每页条数切换监听
       pageSizeSelect.addEventListener('change', () => {
         pageSize = Number(pageSizeSelect.value);
         currentPage = 1;
         renderTable();
       })
-      // 全选框监听
       checkAll.addEventListener('change', toggleAllCheck);
-      // 分页按钮
-      prevPage.addEventListener('click', ()=>{currentPage--; renderTable()})
-      nextPage.addEventListener('click', ()=>{currentPage++; renderTable()})
+      prevPage.addEventListener('click', ()=>{currentPage--; renderTable()});
+      nextPage.addEventListener('click', ()=>{currentPage++; renderTable()});
     }
 
     // Excel导入+去重
@@ -208,14 +220,13 @@
           currentPage = 1;
           renderTable();
         } catch (err) {
-          showMsg('Excel解析失败，请检查表头：unique_record_id、Title、First_Author、Identifier_URLs', 'text-red-600 bg-red-5');
+          showMsg('Excel解析失败，请检查表头是否匹配模板', 'text-red-600 bg-red-5');
           console.error(err);
         }
       }
       reader.readAsArrayBuffer(file);
     })
 
-    // 搜索实时刷新
     searchDom.addEventListener('input', ()=>{currentPage=1; renderTable()});
 
     // 渲染分页表格
@@ -227,13 +238,11 @@
       totalNum.textContent = `(${filterData.length}篇)`;
       tableBody.innerHTML = '';
 
-      // 分页切片
       const totalPage = Math.ceil(filterData.length / pageSize) || 1;
       if(currentPage > totalPage) currentPage = totalPage;
       const start = (currentPage - 1) * pageSize;
       const pageData = filterData.slice(start, start + pageSize);
 
-      // 分页按钮状态
       prevPage.disabled = currentPage <= 1;
       nextPage.disabled = currentPage >= totalPage;
       pageInfo.textContent = `第${currentPage}/${totalPage}页`;
@@ -265,7 +274,6 @@
         tableBody.appendChild(tr);
       })
 
-      // 绑定单行勾选事件
       document.querySelectorAll('.row-check').forEach(ck=>{
         ck.onchange = function(){
           const rid = this.dataset.id;
@@ -275,7 +283,6 @@
       })
     }
 
-    // 全选/取消全选
     function toggleAllCheck(){
       const allRowCheck = document.querySelectorAll('.row-check');
       allRowCheck.forEach(ck=> ck.checked = checkAll.checked);
@@ -286,12 +293,11 @@
       }
     }
 
-    // 单行：跳转川大图书馆下载文献
+    // 单行跳转川大图书馆下载
     window.downloadLibDoc = function (rawStr) {
       const data = JSON.parse(rawStr);
       const titleEncode = encodeURIComponent(data.title);
       const libUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
-      alert("已跳转四川大学图书馆！\n1. 登录校园账号（勾选记住我免重复登录）\n2. 在检索结果找到本篇文献\n3. 进入详情页下载原文\n本地同步生成文献信息备份txt");
       window.open(libUrl, '_blank');
       const content = `=====四川大学儿科睡眠科室文献存档=====
 唯一ID：${data.id}
@@ -307,7 +313,7 @@
       URL.revokeObjectURL(aTag);
     }
 
-    // 导出【选中的文献】Excel
+    // 导出选中文献
     window.exportSelectedRows = function(){
       if(selectedIds.size === 0){
         showMsg("请先勾选需要下载的文献", 'text-red-600 bg-red-5');
@@ -327,14 +333,22 @@
       showMsg(`成功导出选中${selectedList.length}条文献`, 'text-green-600 bg-green-5');
     }
 
-    // 下载空白导入模板
+    // 下载完整50列空白模板（和你上传的模板完全一致）
     window.downloadTemplate = function () {
-      const templateData = [{unique_record_id:"DACT-00001",Title:"填写完整文献标题",First_Author:"第一作者姓名",Identifier_URLs:"文献外链（选填）"}]
-      const sheet = XLSX.utils.json_to_sheet(templateData);
+      // 生成空行对象，所有50列都有
+      const emptyRow = {};
+      TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
+      // 第一行示例数据填充核心字段
+      emptyRow.unique_record_id = '示例：DACT-00001';
+      emptyRow.Title = '示例：填写文献完整标题';
+      emptyRow.First_Author = '示例：第一作者姓名';
+      emptyRow.Identifier_URLs = '示例：文献链接';
+
+      const sheet = XLSX.utils.json_to_sheet([emptyRow], {header: TEMPLATE_HEADERS});
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, sheet, "导入模板");
-      XLSX.writeFile(wb, "科室文献导入模板.xlsx");
-      showMsg("导入模板下载成功，请勿修改表头文字", 'text-green-600 bg-green-5');
+      XLSX.writeFile(wb, "文献导入模板.xlsx");
+      showMsg("模板下载成功，表头与系统标准模板完全一致", 'text-green-600 bg-green-5');
     }
 
     // 导出全部文献
@@ -353,7 +367,7 @@
       showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-5');
     }
 
-    // 清空本地数据
+    // 清空数据
     window.clearAllData = function () {
       if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
         localStorage.removeItem(STORAGE_KEY);

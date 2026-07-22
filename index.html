@@ -234,7 +234,7 @@
         </div>
     </section>
 
-    <!-- ===== 使用说明 ===== -->
+    <!-- ===== 使用说明区块（保留） ===== -->
     <section class="mt-6 bg-white rounded-lg p-5 card-shadow border-l-4 border-hospitalBlue">
         <h3 class="font-bold text-hospitalText flex items-center gap-2">
             <i class="fa-regular fa-circle-question text-hospitalBlue"></i> 使用说明 —— 如何正确下载全文
@@ -259,11 +259,10 @@
             <span><i class="fa-regular fa-key text-blue-500"></i> 登录一次可在一段时间内保持会话</span>
         </div>
     </section>
+
 </main>
 
-<footer class="mt-10 py-4 text-center text-gray-500 text-sm border-t">
-    对接四川大学图书馆 lib.scu.edu.cn ｜ 无数据库纯静态系统 ｜ 部署于 Vercel
-</footer>
+<!-- ===== 页脚已删除 ===== -->
 
 <script>
     // ============================================================
@@ -335,20 +334,23 @@
         `, false);
     }
 
+    // ============================================================
+    //  核心：构建川大图书馆检索链接（修正版：不带任何前缀）
+    // ============================================================
     function buildScuSearchUrl(item) {
         if (item.doi && item.doi.toString().trim() !== '') {
             const doi = item.doi.toString().trim();
             return {
-                url: `https://lib.scu.edu.cn/Search/Index?searchWord=DOI%3A${encodeURIComponent(doi)}`,
-                method: 'DOI精确检索',
+                url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(doi)}`,
+                method: 'DOI检索',
                 label: `DOI: ${doi}`
             };
         }
         if (item.pmid && item.pmid.toString().trim() !== '') {
             const pmid = item.pmid.toString().trim();
             return {
-                url: `https://lib.scu.edu.cn/Search/Index?searchWord=PMID%3A${encodeURIComponent(pmid)}`,
-                method: 'PMID精确检索',
+                url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(pmid)}`,
+                method: 'PMID检索',
                 label: `PMID: ${pmid}`
             };
         }
@@ -507,7 +509,6 @@
         pageData.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-gray-100';
-            // 外部链接列：只显示图标，去掉“外链”文字
             const linkHtml = row.url && row.url.trim() !== '' && row.url !== '无' ?
                 `<a href="${row.url}" target="_blank" class="external-link-icon" title="打开外部链接"><i class="fa-solid fa-link"></i></a>` :
                 '—';

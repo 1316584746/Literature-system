@@ -1,163 +1,348 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>四川大学儿科睡眠科室文献管理系统</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            hospitalBlue: '#0066B3',
-            hospitalLight: '#E6F1FB',
-            hospitalGray: '#F4F7FA',
-            hospitalText: '#23374D'
-          },
-          fontFamily: {
-            medical: ['Microsoft YaHei', 'sans-serif']
-          }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>四川大学儿科睡眠科室文献管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hospitalBlue: '#0066B3',
+                        hospitalLight: '#E6F1FB',
+                        hospitalGray: '#F4F7FA',
+                        hospitalText: '#23374D'
+                    },
+                    fontFamily: {
+                        medical: ['Microsoft YaHei', 'sans-serif']
+                    }
+                }
+            }
         }
-      }
-    }
-  </script>
-  <style>
-    body { font-family: "Microsoft YaHei"; background: #F4F7FA; }
-    .card-shadow { box-shadow: 0 2px 12px rgba(0, 102, 179, 0.08); }
-    .table-hover tr:hover { background-color: #E6F1FB; transition: 0.2s; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background: #0066B3; border-radius: 3px; }
-    .btn-normal{@apply px-3 py-1 rounded text-xs whitespace-nowrap}
-  </style>
+    </script>
+    <style>
+        body {
+            font-family: "Microsoft YaHei";
+            background: #F4F7FA;
+        }
+        .card-shadow {
+            box-shadow: 0 2px 12px rgba(0, 102, 179, 0.08);
+        }
+        .table-hover tr:hover {
+            background-color: #E6F1FB;
+            transition: 0.2s;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0066B3;
+            border-radius: 3px;
+        }
+        .btn-normal {
+            @apply px-3 py-1 rounded text-xs whitespace-nowrap
+        }
+        .login-badge {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 20px;
+            padding: 4px 16px;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #856404;
+        }
+        .login-badge.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+            flex-wrap: wrap;
+        }
+        .step-indicator .step {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f0f0f0;
+            padding: 2px 12px;
+            border-radius: 12px;
+        }
+        .step-indicator .step.active {
+            background: #0066B3;
+            color: #fff;
+        }
+        .step-indicator .arrow {
+            color: #bbb;
+        }
+        .tip-fixed {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 999;
+            max-width: 420px;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+            animation: slideUp 0.3s ease;
+        }
+        .tip-fixed.show {
+            display: block;
+        }
+        .tip-fixed .close-tip {
+            float: right;
+            cursor: pointer;
+            opacity: 0.6;
+            margin-left: 12px;
+        }
+        .tip-fixed .close-tip:hover {
+            opacity: 1;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .badge-doi {
+            background: #e3f2fd;
+            color: #0d47a1;
+            padding: 0 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge-pmid {
+            background: #e8f5e9;
+            color: #1b5e20;
+            padding: 0 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body class="min-h-screen">
-  <header class="bg-hospitalBlue text-white px-6 py-4 shadow-md">
-    <div class="max-w-7xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <i class="fa-solid fa-hospital-user text-2xl"></i>
-        <h1 class="text-xl font-bold">四川大学儿科睡眠科室文献管理系统</h1>
-      </div>
-      <div class="text-sm opacity-9">科室共用｜上传自动去重｜本地永久存储</div>
+
+    <!-- ===== 固定提示浮窗 ===== -->
+    <div id="globalTip" class="tip-fixed">
+        <span class="close-tip" onclick="document.getElementById('globalTip').classList.remove('show')">&times;</span>
+        <div id="globalTipContent" style="font-size:14px;line-height:1.6;">提示内容</div>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- ===== HEADER ===== -->
+    <header class="bg-hospitalBlue text-white px-6 py-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-hospital-user text-2xl"></i>
+                <h1 class="text-xl font-bold">四川大学儿科睡眠科室文献管理系统</h1>
+            </div>
+            <div class="flex items-center gap-4 flex-wrap">
+                <span class="text-sm opacity-90 hidden sm:inline">科室共用｜上传自动去重｜本地永久存储</span>
+                <!-- 登录引导按钮（核心改进） -->
+                <a href="https://lib.scu.edu.cn" target="_blank"
+                class="bg-white text-hospitalBlue px-4 py-1.5 rounded-full text-sm font-medium hover:bg-gray-100 transition flex items-center gap-2 shadow">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                登录川大图书馆
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- 登录状态引导条 -->
+    <div class="bg-white rounded-lg p-3 mb-4 card-shadow flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <i class="fa-regular fa-circle-check text-hospitalBlue text-xl"></i>
+            <div class="step-indicator">
+                <span class="step active"><i class="fa-regular fa-1"></i> 登录图书馆</span>
+                <span class="arrow">→</span>
+                <span class="step"><i class="fa-regular fa-2"></i> 检索文献</span>
+                <span class="arrow">→</span>
+                <span class="step"><i class="fa-regular fa-3"></i> 下载PDF</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-600">
+            <i class="fa-regular fa-lightbulb text-yellow-500"></i>
+            <span>点击「登录川大图书馆」完成统一认证，即可在校外访问全文</span>
+        </div>
+    </div>
+
+    <!-- ===== 操作面板 ===== -->
     <section class="bg-white rounded-lg p-6 card-shadow mb-6">
-      <div class="grid md:grid-cols-4 gap-6 items-center">
-        <div>
-          <label class="block font-medium text-hospitalText mb-2">
-            <i class="fa-solid fa-file-excel text-green-600 mr-2"></i>导入文献Excel
-          </label>
-          <input type="file" id="excelFile" accept=".xlsx,.xls" class="border border-gray-300 rounded px-3 py-2 w-full">
-          <p class="text-xs text-gray-500 mt-1">依据unique_record_id自动去重，重复条目直接跳过</p>
+        <div class="grid md:grid-cols-4 gap-6 items-center">
+            <div>
+                <label class="block font-medium text-hospitalText mb-2">
+                    <i class="fa-solid fa-file-excel text-green-600 mr-2"></i>导入文献Excel
+                </label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" class="border border-gray-300 rounded px-3 py-2 w-full" />
+                <p class="text-xs text-gray-500 mt-1">依据 unique_record_id 自动去重</p>
+            </div>
+            <div>
+                <label class="block font-medium text-hospitalText mb-2">
+                    <i class="fa-solid fa-magnifying-glass text-hospitalBlue mr-2"></i>标题模糊检索
+                </label>
+                <input id="searchInput" placeholder="输入标题关键词筛选..." class="border border-hospitalBlue rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-hospitalLight" />
+            </div>
+            <div class="flex flex-col gap-2">
+                <button onclick="downloadTemplate()" class="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700">
+                    <i class="fa-solid fa-file-down mr-2"></i>下载导入模板
+                </button>
+                <button onclick="batchExportAllExcel()" class="bg-indigo-500 text-white w-full py-2 rounded hover:bg-indigo-600">
+                    <i class="fa-solid fa-file-excel mr-2"></i>批量导出全部Excel
+                </button>
+            </div>
+            <div class="flex flex-col gap-2">
+                <button onclick="clearAllData()" class="bg-red-500 text-white w-full py-2 rounded hover:bg-red-600">
+                    <i class="fa-solid fa-trash mr-2"></i>清空全部本地文献
+                </button>
+                <button onclick="showLoginGuide()" class="bg-yellow-500 text-white w-full py-2 rounded hover:bg-yellow-600 text-sm">
+                    <i class="fa-regular fa-circle-question mr-2"></i>登录帮助
+                </button>
+            </div>
         </div>
-        <div>
-          <label class="block font-medium text-hospitalText mb-2">
-            <i class="fa-solid fa-magnifying-glass text-hospitalBlue mr-2"></i>标题模糊检索
-          </label>
-          <input id="searchInput" placeholder="输入文献标题任意关键词筛选..." class="border border-hospitalBlue rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-hospitalLight">
-        </div>
-        <div class="flex flex-col gap-2">
-          <button onclick="downloadTemplate()" class="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700">
-            <i class="fa-solid fa-file-down mr-2"></i>下载导入模板
-          </button>
-          <button onclick="batchExportAllExcel()" class="bg-indigo-500 text-white w-full py-2 rounded hover:bg-indigo-600">
-            <i class="fa-solid fa-file-excel mr-2"></i>批量导出全部Excel
-          </button>
-        </div>
-        <div class="flex items-end">
-          <button onclick="clearAllData()" class="bg-red-500 text-white w-full py-2 rounded hover:bg-red-600">
-            <i class="fa-solid fa-trash mr-2"></i>清空全部本地文献
-          </button>
-        </div>
-      </div>
-      <div id="tipBox" class="mt-4 hidden py-2 px-3 rounded"></div>
+        <div id="tipBox" class="mt-4 hidden py-2 px-3 rounded"></div>
     </section>
 
+    <!-- ===== 文献列表 ===== -->
     <section class="bg-white rounded-lg p-6 card-shadow">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div class="flex items-center gap-4">
-          <h2 class="font-bold text-hospitalText text-lg">科室文献总库 <span id="totalNum" class="text-hospitalBlue">(0篇)</span></h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">每页显示：</span>
-            <select id="pageSizeSelect" class="border border-gray-300 rounded px-2 py-1 text-sm">
-              <option value="10">10条</option>
-              <option value="20">20条</option>
-              <option value="50">50条</option>
-              <option value="100">100条</option>
-            </select>
-          </div>
-          <button onclick="batchOpenSelectedDocs()" class="bg-hospitalBlue text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-            <i class="fa-solid fa-download mr-1"></i>批量下载选中文献
-          </button>
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div class="flex items-center gap-4 flex-wrap">
+                <h2 class="font-bold text-hospitalText text-lg">科室文献总库 <span id="totalNum" class="text-hospitalBlue">(0篇)</span></h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">每页显示：</span>
+                    <select id="pageSizeSelect" class="border border-gray-300 rounded px-2 py-1 text-sm">
+                        <option value="10">10条</option>
+                        <option value="20" selected>20条</option>
+                        <option value="50">50条</option>
+                        <option value="100">100条</option>
+                    </select>
+                </div>
+                <button onclick="batchOpenSelectedDocs()" class="bg-hospitalBlue text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-download mr-1"></i>批量下载选中文献
+                </button>
+                <button onclick="batchOpenSelectedDocsWithLogin()" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm hover:bg-green-700 transition">
+                    <i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>登录后批量下载
+                </button>
+            </div>
         </div>
-      </div>
 
-      <div class="overflow-x-auto table-hover">
-        <table class="w-full border-collapse text-sm w-full">
-          <thead class="bg-hospitalLight">
-            <tr>
-              <th class="border border-gray-200 px-3 py-2 w-[4%] text-center">
-                <input type="checkbox" id="checkAll" class="cursor-pointer">
-              </th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[9%]">唯一ID</th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[13%]">DOI</th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[10%]">PMID</th>
-              <th class="border border-gray-200 px-3 py-2 text-left w-[34%]">文献标题 Title</th>
-              <th class="border border-gray-200 px-3 py-2 w-[10%]">第一作者</th>
-              <th class="border border-gray-200 px-3 py-2 w-[10%]">外部链接</th>
-              <th class="border border-gray-200 px-3 py-2 w-[10%] text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr>
-              <td colspan="8" class="text-center py-10 text-gray-400">
-                <i class="fa-solid fa-folder-open text-3xl block mb-2"></i>暂无文献，请上传Excel文件
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="overflow-x-auto table-hover">
+            <table class="w-full border-collapse text-sm">
+                <thead class="bg-hospitalLight">
+                    <tr>
+                        <th class="border border-gray-200 px-3 py-2 w-[4%] text-center">
+                            <input type="checkbox" id="checkAll" class="cursor-pointer" />
+                        </th>
+                        <th class="border border-gray-200 px-3 py-2 text-left w-[8%]">唯一ID</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left w-[11%]">DOI</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left w-[9%]">PMID</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left w-[33%]">文献标题 Title</th>
+                        <th class="border border-gray-200 px-3 py-2 w-[9%]">第一作者</th>
+                        <th class="border border-gray-200 px-3 py-2 w-[9%]">外部链接</th>
+                        <th class="border border-gray-200 px-3 py-2 w-[9%] text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-10 text-gray-400">
+                            <i class="fa-solid fa-folder-open text-3xl block mb-2"></i>暂无文献，请上传Excel文件
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-      <div class="flex justify-center items-center mt-4 gap-3" id="paginationBox">
-        <button id="prevPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">上一页</button>
-        <span id="pageInfo" class="text-sm text-gray-600">第 1 页</span>
-        <button id="nextPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">下一页</button>
-      </div>
+        <div class="flex justify-center items-center mt-4 gap-3" id="paginationBox">
+            <button id="prevPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">上一页</button>
+            <span id="pageInfo" class="text-sm text-gray-600">第 1 页</span>
+            <button id="nextPage" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">下一页</button>
+        </div>
     </section>
-  </main>
 
-  <footer class="mt-10 py-4 text-center text-gray-500 text-sm border-t">
-    对接四川大学图书馆 lib.scu.edu.cn | 无数据库纯静态系统 | Vercel免费部署
-  </footer>
+    <!-- ===== 使用说明 ===== -->
+    <section class="mt-6 bg-white rounded-lg p-5 card-shadow border-l-4 border-hospitalBlue">
+        <h3 class="font-bold text-hospitalText flex items-center gap-2">
+            <i class="fa-regular fa-circle-question text-hospitalBlue"></i> 使用说明 —— 如何正确下载全文
+        </h3>
+        <div class="grid md:grid-cols-3 gap-4 mt-3 text-sm text-gray-700">
+            <div class="flex items-start gap-2">
+                <span class="bg-hospitalBlue text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold">1</span>
+                <div><span class="font-medium">登录川大图书馆</span><br />点击页面右上角「登录川大图书馆」按钮，完成统一身份认证（支持校外访问）。</div>
+            </div>
+            <div class="flex items-start gap-2">
+                <span class="bg-hospitalBlue text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold">2</span>
+                <div><span class="font-medium">点击下载文献</span><br />系统会按 <span class="badge-doi">DOI</span> → <span class="badge-pmid">PMID</span> → 标题 → 外链 的优先级，自动跳转到川大图书馆检索页。</div>
+            </div>
+            <div class="flex items-start gap-2">
+                <span class="bg-hospitalBlue text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
+                <div><span class="font-medium">获取全文PDF</span><br />在检索结果中点击「全文下载」或「PDF」按钮，即可下载。若未显示，可尝试「文献传递」。</div>
+            </div>
+        </div>
+        <div class="mt-3 text-xs text-gray-400 border-t pt-2 flex flex-wrap gap-4">
+            <span><i class="fa-regular fa-circle-check text-green-500"></i> 批量下载时会依次打开多个标签页，请允许弹窗</span>
+            <span><i class="fa-regular fa-clock text-amber-500"></i> 每个标签页间隔 300ms，避免浏览器拦截</span>
+            <span><i class="fa-regular fa-key text-blue-500"></i> 登录一次可在一段时间内保持会话</span>
+        </div>
+    </section>
+</main>
 
-  <script>
+<footer class="mt-10 py-4 text-center text-gray-500 text-sm border-t">
+    对接四川大学图书馆 lib.scu.edu.cn ｜ 无数据库纯静态系统 ｜ 部署于 Vercel
+</footer>
+
+<script>
+    // ============================================================
+    //  核心配置 & 状态
+    // ============================================================
     const STORAGE_KEY = 'ped_dept_literature';
     let literatureList = [];
     let selectedIds = new Set();
     let currentPage = 1;
-    let pageSize = 10;
+    let pageSize = 20;
 
-    // 完整50列表头
+    // 完整50列表头（用于模板）
     const TEMPLATE_HEADERS = [
-      'Final_FT_retrieval_order','original_order','unique_record_id','source_databases',
-      'source_database_count','crossdb_dedup_method','PMID','PMCID','DOI',
-      'Embase_Accession_Number','WoS_Accession_Number','Publication_Year','Title','Abstract',
-      'Journal','First_Author','Language','Publication_Types','Keywords',
-      'MeSH_or_Subject_Terms','Source_Search_IDs_or_Domains','Source_Domains_All',
-      'Inferred_Evidence_Domains_All','Primary_Evidence_Domain','Initial_Relevance_Priority',
-      'Identifier_URLs','Reviewer_A_decision','Reviewer_A_reason',
-      'Reviewer_A_Evidence_Unit_or_Notes','Reviewer_B_decision','Reviewer_B_reason',
-      'Reviewer_B_Evidence_Unit_or_Notes','three_class_agreement','binary_A','binary_B',
-      'binary_agreement','conflict_type','decision_pair','FT_priority','FT_priority_rank',
-      'FT_priority_label','Recommended_next_step','Final_TA_decision','Final_retrieve_decision',
-      'Final_TA_basis','Final_TA_rule_code','Final_TA_reason','Final_TA_confidence',
-      'Final_FT_priority_rank','Final_FT_priority_label'
+        'Final_FT_retrieval_order', 'original_order', 'unique_record_id', 'source_databases',
+        'source_database_count', 'crossdb_dedup_method', 'PMID', 'PMCID', 'DOI',
+        'Embase_Accession_Number', 'WoS_Accession_Number', 'Publication_Year', 'Title', 'Abstract',
+        'Journal', 'First_Author', 'Language', 'Publication_Types', 'Keywords',
+        'MeSH_or_Subject_Terms', 'Source_Search_IDs_or_Domains', 'Source_Domains_All',
+        'Inferred_Evidence_Domains_All', 'Primary_Evidence_Domain', 'Initial_Relevance_Priority',
+        'Identifier_URLs', 'Reviewer_A_decision', 'Reviewer_A_reason',
+        'Reviewer_A_Evidence_Unit_or_Notes', 'Reviewer_B_decision', 'Reviewer_B_reason',
+        'Reviewer_B_Evidence_Unit_or_Notes', 'three_class_agreement', 'binary_A', 'binary_B',
+        'binary_agreement', 'conflict_type', 'decision_pair', 'FT_priority', 'FT_priority_rank',
+        'FT_priority_label', 'Recommended_next_step', 'Final_TA_decision', 'Final_retrieve_decision',
+        'Final_TA_basis', 'Final_TA_rule_code', 'Final_TA_reason', 'Final_TA_confidence',
+        'Final_FT_priority_rank', 'Final_FT_priority_label'
     ];
 
+    // ============================================================
+    //  DOM 引用
+    // ============================================================
     const excelFileDom = document.getElementById('excelFile');
     const searchDom = document.getElementById('searchInput');
     const tableBody = document.getElementById('tableBody');
@@ -169,186 +354,129 @@
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    // 初始化
-    window.onload = function () {
-      const cacheData = localStorage.getItem(STORAGE_KEY);
-      if (cacheData) {
-        literatureList = JSON.parse(cacheData);
-        renderTable();
-        showMsg(`成功加载本地文献库，共${literatureList.length}篇`, 'text-green-600 bg-green-5');
-      }
-      pageSizeSelect.addEventListener('change', () => {
-        pageSize = Number(pageSizeSelect.value);
-        currentPage = 1;
-        renderTable();
-      })
-      checkAll.addEventListener('change', toggleAllCheck);
-      prevPage.addEventListener('click', ()=>{currentPage--; renderTable()});
-      nextPage.addEventListener('click', ()=>{currentPage++; renderTable()});
-
-      // 事件委托绑定下载按钮
-      tableBody.addEventListener('click', function(e){
-        const btn = e.target.closest('.download-btn');
-        if(btn){
-          const rid = btn.dataset.id;
-          downloadLibDocById(rid);
-        }
-      })
+    // ============================================================
+    //  工具函数：消息提示
+    // ============================================================
+    function showMsg(text, className) {
+        tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
+        tipBox.classList.remove('hidden');
+        tipBox.textContent = text;
+        clearTimeout(tipBox._timer);
+        tipBox._timer = setTimeout(() => tipBox.classList.add('hidden'), 5000);
     }
 
-    // Excel导入+去重（新增读取PMID、DOI字段）
-    excelFileDom.addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      showMsg('正在解析Excel，自动校验重复文献...', 'text-hospitalBlue bg-hospitalLight');
-      const reader = new FileReader();
-      reader.onload = function (ev) {
-        try {
-          const buffer = new Uint8Array(ev.target.result);
-          const workbook = XLSX.read(buffer, { type: 'array' });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rawData = XLSX.utils.sheet_to_json(sheet);
-          const newBatch = rawData.map(item => ({
-            id: item.unique_record_id || '无',
-            doi: item.DOI || '',
-            pmid: item.PMID || '',
-            title: item.Title || '无标题',
-            author: item.First_Author || '未知作者',
-            url: item.Identifier_URLs || ''
-          }));
-          const existIdSet = new Set(literatureList.map(item => item.id));
-          let addNum = 0, skipNum = 0;
-          newBatch.forEach(item => {
-            if (!existIdSet.has(item.id)) {
-              literatureList.push(item); existIdSet.add(item.id); addNum++;
-            } else skipNum++;
-          })
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(literatureList));
-          showMsg(`导入完成：新增${addNum}篇，重复跳过${skipNum}篇，当前总库${literatureList.length}篇`, 'text-green-600 bg-green-5');
-          currentPage = 1;
-          renderTable();
-        } catch (err) {
-          showMsg('Excel解析失败，请检查表头是否匹配模板', 'text-red-600 bg-red-5');
-          console.error(err);
+    function showGlobalTip(text, isSuccess = false) {
+        const el = document.getElementById('globalTip');
+        const content = document.getElementById('globalTipContent');
+        content.innerHTML = text;
+        el.className = 'tip-fixed show';
+        if (isSuccess) {
+            el.style.borderLeft = '4px solid #28a745';
+        } else {
+            el.style.borderLeft = '4px solid #ffc107';
         }
-      }
-      reader.readAsArrayBuffer(file);
-    })
-
-    searchDom.addEventListener('input', ()=>{currentPage=1; renderTable()});
-
-    // 渲染表格（新增PMID列）
-    function renderTable() {
-      selectedIds.clear();
-      checkAll.checked = false;
-      const keyword = searchDom.value.trim().toLowerCase();
-      const filterData = literatureList.filter(row => row.title.toLowerCase().includes(keyword));
-      totalNum.textContent = `(${filterData.length}篇)`;
-      tableBody.innerHTML = '';
-
-      const totalPage = Math.ceil(filterData.length / pageSize) || 1;
-      if(currentPage > totalPage) currentPage = totalPage;
-      const start = (currentPage - 1) * pageSize;
-      const pageData = filterData.slice(start, start + pageSize);
-
-      prevPage.disabled = currentPage <= 1;
-      nextPage.disabled = currentPage >= totalPage;
-      pageInfo.textContent = `第${currentPage}/${totalPage}页`;
-
-      if(filterData.length === 0){
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-400">${literatureList.length ===0?'文献库为空，请上传Excel':'未匹配到对应标题文献'}</td></tr>`;
-        return;
-      }
-
-      pageData.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-gray-100';
-        tr.innerHTML = `
-          <td class="border border-gray-200 px-3 py-2 text-center">
-            <input type="checkbox" class="row-check cursor-pointer" data-id="${row.id}">
-          </td>
-          <td class="border border-gray-200 px-3 py-2">${row.id}</td>
-          <td class="border border-gray-200 px-3 py-2 text-blue-600 break-all">${row.doi || '-'}</td>
-          <td class="border border-gray-200 px-3 py-2 text-green-600">${row.pmid || '-'}</td>
-          <td class="border border-gray-200 px-3 py-2">${row.title}</td>
-          <td class="border border-gray-200 px-3 py-2">${row.author}</td>
-          <td class="border border-gray-200 px-3 break-all py-2 text-blue-600">
-            ${row.url ? `<a href="${row.url}" target="_blank">外链</a>` : '无'}
-          </td>
-          <td class="border border-gray-200 px-3 py-2 text-center">
-            <button class="download-btn bg-hospitalBlue text-white btn-normal" data-id="${row.id}">
-              <i class="fa-solid fa-download mr-1"></i>下载文献
-            </button>
-          </td>
-        `;
-        tableBody.appendChild(tr);
-      })
-
-      document.querySelectorAll('.row-check').forEach(ck=>{
-        ck.onchange = function(){
-          const rid = this.dataset.id;
-          if(this.checked) selectedIds.add(rid);
-          else selectedIds.delete(rid);
-        }
-      })
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.classList.remove('show'), 8000);
     }
 
-    function toggleAllCheck(){
-      const allRowCheck = document.querySelectorAll('.row-check');
-      allRowCheck.forEach(ck=> ck.checked = checkAll.checked);
-      if(checkAll.checked){
-        document.querySelectorAll('.row-check').forEach(item=>selectedIds.add(item.dataset.id))
-      }else{
-        selectedIds.clear();
-      }
+    // ============================================================
+    //  登录引导
+    // ============================================================
+    function showLoginGuide() {
+        showGlobalTip(`
+            <strong>📚 川大图书馆登录指南</strong><br />
+            1. 点击右上角 <strong>「登录川大图书馆」</strong> 按钮<br />
+            2. 使用 <strong>统一身份认证</strong>（学号/工号 + 密码）<br />
+            3. 登录成功后，回到本页面点击「下载文献」<br />
+            4. 系统会自动跳转到检索页，<strong>已登录状态下可直接下载PDF</strong><br />
+            <span style="font-size:12px;color:#aaa;display:block;margin-top:4px;">💡 支持校外访问，一次登录可持续使用</span>
+        `, false);
     }
 
-    // ===== 核心：按指定优先级 DOI → PMID → 标题 → 外链 =====
-    function downloadLibDocById(id){
-      const data = literatureList.find(item => item.id === id);
-      if(!data) return;
-      try{
-        let targetUrl = '';
-        let searchType = '';
+    // ============================================================
+    //  核心：构建川大图书馆检索链接（改进版）
+    // ============================================================
+    function buildScuSearchUrl(item) {
+        // 优先级1：DOI（使用 "DOI:" 前缀精确检索）
+        if (item.doi && item.doi.toString().trim() !== '') {
+            const doi = item.doi.toString().trim();
+            return {
+                url: `https://lib.scu.edu.cn/Search/Index?searchWord=DOI%3A${encodeURIComponent(doi)}`,
+                method: 'DOI精确检索',
+                label: `DOI: ${doi}`
+            };
+        }
+        // 优先级2：PMID（使用 "PMID:" 前缀精确检索）
+        if (item.pmid && item.pmid.toString().trim() !== '') {
+            const pmid = item.pmid.toString().trim();
+            return {
+                url: `https://lib.scu.edu.cn/Search/Index?searchWord=PMID%3A${encodeURIComponent(pmid)}`,
+                method: 'PMID精确检索',
+                label: `PMID: ${pmid}`
+            };
+        }
+        // 优先级3：标题（使用标题全文检索）
+        if (item.title && item.title.trim() !== '' && item.title !== '无标题') {
+            return {
+                url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title.trim())}`,
+                method: '标题检索',
+                label: `标题: ${item.title.trim().substring(0, 30)}...`
+            };
+        }
+        // 优先级4：外链（如果存在且有效）
+        if (item.url && item.url.trim() !== '' && item.url !== '无' && item.url !== '无外链') {
+            return {
+                url: item.url.trim(),
+                method: '外链直达',
+                label: '外链'
+            };
+        }
+        // 兜底：用标题（即使为空也尝试）
+        return {
+            url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title || '')}`,
+            method: '标题检索(兜底)',
+            label: '标题检索'
+        };
+    }
 
-        // 优先级1：DOI
-        if(data.doi && data.doi.toString().trim() !== ''){
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.doi)}`;
-          searchType = 'DOI检索';
-        }
-        // 优先级2：PMID
-        else if(data.pmid && data.pmid.toString().trim() !== ''){
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.pmid)}`;
-          searchType = 'PMID检索';
-        }
-        // 优先级3：标题
-        else if(data.title && data.title.trim() !== ''){
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.title)}`;
-          searchType = '标题检索';
-        }
-        // 优先级4：外链
-        else if(data.url && data.url.trim() !== '' && data.url !== '无'){
-          targetUrl = data.url;
-          searchType = '外链直达';
-        }
-        // 兜底：标题
-        else{
-          targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(data.title)}`;
-          searchType = '标题检索';
+    // ============================================================
+    //  单篇下载（核心改进：登录引导 + 精准链接）
+    // ============================================================
+    function downloadLibDocById(id) {
+        const data = literatureList.find(item => item.id === id);
+        if (!data) {
+            showMsg('未找到该文献', 'text-red-600 bg-red-50');
+            return;
         }
 
-        window.open(targetUrl, '_blank');
+        // 弹出登录确认
+        const result = buildScuSearchUrl(data);
+        const confirmMsg =
+            `即将跳转至川大图书馆「${result.method}」页面\n\n` +
+            `文献：${data.title}\n` +
+            `检索词：${result.label}\n\n` +
+            `⚠️ 请确保已登录川大图书馆（点击右上角按钮登录）\n` +
+            `已登录用户可直接在结果页下载PDF\n\n` +
+            `点击「确定」打开检索页面`;
 
-        // 同步下载TXT备份
-        const txtContent = `=====四川大学儿科睡眠科室文献存档=====
-唯一ID：${data.id}
-DOI：${data.doi || '无'}
-PMID：${data.pmid || '无'}
-第一作者：${data.author}
-文献标题：${data.title}
-外链：${data.url || "无"}
-本次检索方式：${searchType}
-四川大学图书馆：https://lib.scu.edu.cn`;
+        if (!confirm(confirmMsg)) return;
+
+        // 打开检索页
+        window.open(result.url, '_blank');
+
+        // 同时下载TXT备份（保留原有功能）
+        const txtContent =
+            `===== 四川大学儿科睡眠科室文献存档 =====\n` +
+            `唯一ID：${data.id}\n` +
+            `DOI：${data.doi || '无'}\n` +
+            `PMID：${data.pmid || '无'}\n` +
+            `第一作者：${data.author}\n` +
+            `文献标题：${data.title}\n` +
+            `外链：${data.url || '无'}\n` +
+            `本次检索方式：${result.method}\n` +
+            `检索链接：${result.url}\n` +
+            `四川大学图书馆：https://lib.scu.edu.cn`;
+
         const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
         const aDom = document.createElement('a');
         aDom.href = URL.createObjectURL(blob);
@@ -357,105 +485,298 @@ PMID：${data.pmid || '无'}
         aDom.click();
         document.body.removeChild(aDom);
         URL.revokeObjectURL(aDom.href);
-      }catch(e){
-        console.error('下载异常：',e);
-        showMsg('操作失败，请刷新页面重试', 'text-red-600 bg-red-5');
-      }
+
+        showGlobalTip(`✅ 已打开「${result.method}」页面，登录后即可下载PDF`, true);
     }
 
-    // 批量下载（同样按 DOI → PMID → 标题 → 外链 优先级）
-    function batchOpenSelectedDocs(){
-      if(selectedIds.size === 0){
-        showMsg("请先勾选需要下载的文献", 'text-red-600 bg-red-5');
-        return;
-      }
-      const selectedList = literatureList.filter(item => selectedIds.has(item.id));
-      const confirmOpen = confirm(`即将打开 ${selectedList.length} 个文献页面\n检索优先级：DOI → PMID → 标题 → 外链\n浏览器可能拦截弹窗，请点击地址栏右侧允许弹窗\n登录一次川大校园账号即可全部下载PDF`);
-      if(!confirmOpen) return;
+    // ============================================================
+    //  批量下载（核心改进：登录引导 + 精准链接）
+    // ============================================================
+    function batchOpenSelectedDocs() {
+        if (selectedIds.size === 0) {
+            showMsg('请先勾选需要下载的文献', 'text-red-600 bg-red-50');
+            return;
+        }
+        const selectedList = literatureList.filter(item => selectedIds.has(item.id));
+        if (selectedList.length === 0) return;
 
-      selectedList.forEach((item, index) => {
-        setTimeout(() => {
-          let targetUrl = '';
-          // 优先级1：DOI
-          if(item.doi && item.doi.toString().trim() !== ''){
-            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.doi)}`;
-          }
-          // 优先级2：PMID
-          else if(item.pmid && item.pmid.toString().trim() !== ''){
-            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.pmid)}`;
-          }
-          // 优先级3：标题
-          else if(item.title && item.title.trim() !== ''){
-            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title)}`;
-          }
-          // 优先级4：外链
-          else if(item.url && item.url.trim() !== '' && item.url !== '无'){
-            targetUrl = item.url;
-          }
-          // 兜底
-          else{
-            targetUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title)}`;
-          }
-          window.open(targetUrl, '_blank');
-        }, index * 300);
-      })
-      showMsg(`已批量打开 ${selectedList.length} 篇文献（DOI→PMID→标题→外链），请在新标签页下载PDF`, 'text-green-600 bg-green-5');
+        const confirmMsg =
+            `即将批量打开 ${selectedList.length} 篇文献的检索页面\n\n` +
+            `检索优先级：DOI → PMID → 标题 → 外链\n` +
+            `⚠️ 请确保已登录川大图书馆（点击右上角按钮登录）\n` +
+            `已登录用户可在每个页面直接下载PDF\n\n` +
+            `浏览器可能拦截弹窗，请点击「允许」\n` +
+            `点击「确定」开始批量打开`;
+
+        if (!confirm(confirmMsg)) return;
+
+        let openedCount = 0;
+        selectedList.forEach((item, index) => {
+            setTimeout(() => {
+                const result = buildScuSearchUrl(item);
+                window.open(result.url, '_blank');
+                openedCount++;
+                if (openedCount === selectedList.length) {
+                    showGlobalTip(
+                        `✅ 已批量打开 ${selectedList.length} 篇文献\n` +
+                        `按优先级：DOI → PMID → 标题 → 外链\n` +
+                        `登录后即可逐个下载PDF`, true
+                    );
+                }
+            }, index * 350);
+        });
     }
 
-    // 下载导入模板
+    // 带登录引导的批量下载（先弹出登录提示）
+    function batchOpenSelectedDocsWithLogin() {
+        showGlobalTip(`
+            <strong>🔑 批量下载前请先登录</strong><br />
+            1. 点击右上角 <strong>「登录川大图书馆」</strong> 完成认证<br />
+            2. 登录成功后，点击 <strong>「批量下载选中文献」</strong><br />
+            3. 系统将依次打开所有文献的检索页，<strong>登录状态下可直接下载PDF</strong><br />
+            <span style="font-size:12px;color:#aaa;display:block;margin-top:4px;">💡 如已登录请忽略此提示，直接使用批量下载按钮</span>
+        `, false);
+
+        // 同时高亮提示
+        showMsg('请先登录川大图书馆，再使用批量下载功能', 'text-amber-600 bg-amber-50');
+    }
+
+    // ============================================================
+    //  下载导入模板
+    // ============================================================
     function downloadTemplate() {
-      const emptyRow = {};
-      TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
-      emptyRow.unique_record_id = '示例：DACT-00001';
-      emptyRow.DOI = '示例：10.1016/j.sleep.2024.01.001';
-      emptyRow.PMID = '示例：38000000';
-      emptyRow.Title = '示例：填写文献完整标题';
-      emptyRow.First_Author = '示例：第一作者姓名';
-      emptyRow.Identifier_URLs = '示例：川大图书馆sfx文献链接';
-      const sheet = XLSX.utils.json_to_sheet([emptyRow], {header: TEMPLATE_HEADERS});
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, "导入模板");
-      XLSX.writeFile(wb, "文献导入模板.xlsx");
-      showMsg("模板下载成功，表头与系统标准模板完全一致", 'text-green-600 bg-green-5');
+        const emptyRow = {};
+        TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
+        emptyRow.unique_record_id = '示例：DACT-00001';
+        emptyRow.DOI = '示例：10.1016/j.sleep.2024.01.001';
+        emptyRow.PMID = '示例：38000000';
+        emptyRow.Title = '示例：填写文献完整标题';
+        emptyRow.First_Author = '示例：第一作者姓名';
+        emptyRow.Identifier_URLs = '示例：川大图书馆sfx文献链接';
+        const sheet = XLSX.utils.json_to_sheet([emptyRow], { header: TEMPLATE_HEADERS });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '导入模板');
+        XLSX.writeFile(wb, '文献导入模板.xlsx');
+        showMsg('模板下载成功，表头与系统标准模板完全一致', 'text-green-600 bg-green-50');
     }
 
-    // 批量导出全部Excel（包含DOI、PMID）
+    // ============================================================
+    //  批量导出全部Excel
+    // ============================================================
     function batchExportAllExcel() {
-      if (literatureList.length === 0) {
-        showMsg("文献库暂无数据，无法批量导出", 'text-red-600 bg-red-5');
-        return;
-      }
-      const exportArr = literatureList.map(item => ({
-        unique_record_id: item.id,
-        DOI: item.doi,
-        PMID: item.pmid,
-        Title: item.title,
-        First_Author: item.author,
-        Identifier_URLs: item.url
-      }))
-      const sheet = XLSX.utils.json_to_sheet(exportArr);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, "全部科室文献");
-      XLSX.writeFile(wb, "科室文献总库_备份.xlsx");
-      showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-5');
+        if (literatureList.length === 0) {
+            showMsg('文献库暂无数据，无法批量导出', 'text-red-600 bg-red-50');
+            return;
+        }
+        const exportArr = literatureList.map(item => ({
+            unique_record_id: item.id,
+            DOI: item.doi,
+            PMID: item.pmid,
+            Title: item.title,
+            First_Author: item.author,
+            Identifier_URLs: item.url
+        }));
+        const sheet = XLSX.utils.json_to_sheet(exportArr);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, '全部科室文献');
+        XLSX.writeFile(wb, '科室文献总库_备份.xlsx');
+        showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-50');
     }
 
-    // 清空数据
+    // ============================================================
+    //  清空数据
+    // ============================================================
     function clearAllData() {
-      if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
-        localStorage.removeItem(STORAGE_KEY);
-        literatureList = [];
+        if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
+            localStorage.removeItem(STORAGE_KEY);
+            literatureList = [];
+            currentPage = 1;
+            renderTable();
+            showMsg('本地文献库已全部清空', 'text-red-600 bg-red-50');
+        }
+    }
+
+    // ============================================================
+    //  渲染表格
+    // ============================================================
+    function renderTable() {
+        selectedIds.clear();
+        checkAll.checked = false;
+        const keyword = searchDom.value.trim().toLowerCase();
+        const filterData = literatureList.filter(row => row.title.toLowerCase().includes(keyword));
+        totalNum.textContent = `(${filterData.length}篇)`;
+        tableBody.innerHTML = '';
+
+        const totalPage = Math.ceil(filterData.length / pageSize) || 1;
+        if (currentPage > totalPage) currentPage = totalPage;
+        const start = (currentPage - 1) * pageSize;
+        const pageData = filterData.slice(start, start + pageSize);
+
+        prevPage.disabled = currentPage <= 1;
+        nextPage.disabled = currentPage >= totalPage;
+        pageInfo.textContent = `第${currentPage}/${totalPage}页`;
+
+        if (filterData.length === 0) {
+            tableBody.innerHTML =
+                `<tr><td colspan="8" class="text-center py-10 text-gray-400">${literatureList.length === 0 ? '文献库为空，请上传Excel文件' : '未匹配到对应标题文献'}</td></tr>`;
+            return;
+        }
+
+        pageData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-100';
+            tr.innerHTML = `
+                <td class="border border-gray-200 px-3 py-2 text-center">
+                    <input type="checkbox" class="row-check cursor-pointer" data-id="${row.id}" />
+                </td>
+                <td class="border border-gray-200 px-3 py-2 text-xs">${row.id}</td>
+                <td class="border border-gray-200 px-3 py-2 text-blue-600 text-xs break-all">${row.doi ? `<span class="badge-doi">DOI</span> ${row.doi.substring(0, 28)}${row.doi.length > 28 ? '…' : ''}` : '-'}</td>
+                <td class="border border-gray-200 px-3 py-2 text-green-600 text-xs">${row.pmid ? `<span class="badge-pmid">PMID</span> ${row.pmid}` : '-'}</td>
+                <td class="border border-gray-200 px-3 py-2 text-sm">${row.title}</td>
+                <td class="border border-gray-200 px-3 py-2 text-sm">${row.author}</td>
+                <td class="border border-gray-200 px-3 py-2 text-center text-sm">
+                    ${row.url && row.url.trim() !== '' && row.url !== '无' ? `<a href="${row.url}" target="_blank" class="text-hospitalBlue hover:underline">外链</a>` : '—'}
+                </td>
+                <td class="border border-gray-200 px-3 py-2 text-center">
+                    <button class="download-btn bg-hospitalBlue text-white btn-normal hover:bg-blue-700 transition" data-id="${row.id}">
+                        <i class="fa-solid fa-download mr-1"></i>下载
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.row-check').forEach(ck => {
+            ck.onchange = function() {
+                const rid = this.dataset.id;
+                if (this.checked) selectedIds.add(rid);
+                else selectedIds.delete(rid);
+            };
+        });
+    }
+
+    function toggleAllCheck() {
+        const allRowCheck = document.querySelectorAll('.row-check');
+        allRowCheck.forEach(ck => ck.checked = checkAll.checked);
+        if (checkAll.checked) {
+            document.querySelectorAll('.row-check').forEach(item => selectedIds.add(item.dataset.id));
+        } else {
+            selectedIds.clear();
+        }
+    }
+
+    // ============================================================
+    //  Excel 导入 + 去重
+    // ============================================================
+    excelFileDom.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        showMsg('正在解析Excel，自动校验重复文献...', 'text-hospitalBlue bg-hospitalLight');
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const buffer = new Uint8Array(ev.target.result);
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rawData = XLSX.utils.sheet_to_json(sheet);
+                const newBatch = rawData.map(item => ({
+                    id: item.unique_record_id || '无',
+                    doi: item.DOI || '',
+                    pmid: item.PMID || '',
+                    title: item.Title || '无标题',
+                    author: item.First_Author || '未知作者',
+                    url: item.Identifier_URLs || ''
+                }));
+                const existIdSet = new Set(literatureList.map(item => item.id));
+                let addNum = 0,
+                    skipNum = 0;
+                newBatch.forEach(item => {
+                    if (!existIdSet.has(item.id) && item.id !== '无') {
+                        literatureList.push(item);
+                        existIdSet.add(item.id);
+                        addNum++;
+                    } else {
+                        skipNum++;
+                    }
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(literatureList));
+                showMsg(`导入完成：新增${addNum}篇，重复跳过${skipNum}篇，当前总库${literatureList.length}篇`,
+                    'text-green-600 bg-green-50');
+                currentPage = 1;
+                renderTable();
+            } catch (err) {
+                showMsg('Excel解析失败，请检查表头是否匹配模板', 'text-red-600 bg-red-50');
+                console.error(err);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        // 清空input，允许重复上传同一文件
+        e.target.value = '';
+    });
+
+    // ============================================================
+    //  搜索 & 分页 事件绑定
+    // ============================================================
+    searchDom.addEventListener('input', () => { currentPage = 1;
+        renderTable(); });
+    pageSizeSelect.addEventListener('change', () => {
+        pageSize = Number(pageSizeSelect.value);
         currentPage = 1;
         renderTable();
-        showMsg('本地文献库已全部清空', 'text-red-600 bg-red-5');
-      }
-    }
+    });
+    checkAll.addEventListener('change', toggleAllCheck);
+    prevPage.addEventListener('click', () => { if (currentPage > 1) { currentPage--;
+            renderTable(); } });
+    nextPage.addEventListener('click', () => {
+        const total = Math.ceil(literatureList.filter(row => row.title.toLowerCase().includes(searchDom.value.trim()
+            .toLowerCase())).length / pageSize) || 1;
+        if (currentPage < total) { currentPage++;
+            renderTable(); }
+    });
 
-    function showMsg(text, className) {
-      tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
-      tipBox.classList.remove('hidden');
-      setTimeout(() => tipBox.classList.add('hidden'), 4000);
-    }
-  </script>
+    // 事件委托：单篇下载
+    tableBody.addEventListener('click', function(e) {
+        const btn = e.target.closest('.download-btn');
+        if (btn) {
+            const rid = btn.dataset.id;
+            downloadLibDocById(rid);
+        }
+    });
+
+    // ============================================================
+    //  初始化：加载本地存储
+    // ============================================================
+    window.onload = function() {
+        const cacheData = localStorage.getItem(STORAGE_KEY);
+        if (cacheData) {
+            try {
+                literatureList = JSON.parse(cacheData);
+                renderTable();
+                showMsg(`✅ 成功加载本地文献库，共 ${literatureList.length} 篇`, 'text-green-600 bg-green-50');
+            } catch (e) {
+                localStorage.removeItem(STORAGE_KEY);
+                literatureList = [];
+                renderTable();
+                showMsg('⚠️ 本地数据损坏，已重置', 'text-red-600 bg-red-50');
+            }
+        } else {
+            renderTable();
+        }
+
+        // 自动显示一次登录提示（仅首次加载时）
+        if (!sessionStorage.getItem('login_tip_shown')) {
+            setTimeout(() => {
+                showGlobalTip(`
+                    <strong>👋 欢迎使用科室文献管理系统</strong><br />
+                    使用前请先点击右上角 <strong>「登录川大图书馆」</strong><br />
+                    登录后下载文献可直接获取PDF全文<br />
+                    <span style="font-size:12px;color:#aaa;display:block;margin-top:4px;">✅ 支持校外访问，一次登录持续有效</span>
+                `, false);
+                sessionStorage.setItem('login_tip_shown', '1');
+            }, 800);
+        }
+    };
+</script>
+
 </body>
 </html>

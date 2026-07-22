@@ -85,10 +85,13 @@
                 transform: translateY(0);
             }
         }
-        /* 不再需要 badge 样式，可以移除，但保留以防其他地方用到 */
-        .badge-doi,
-        .badge-pmid {
-            display: none;
+        .external-link-icon {
+            font-size: 16px;
+            color: #0066B3;
+            transition: color 0.2s;
+        }
+        .external-link-icon:hover {
+            color: #004080;
         }
     </style>
 </head>
@@ -272,7 +275,6 @@
     let currentPage = 1;
     let pageSize = 20;
 
-    // 完整50列表头（用于模板）
     const TEMPLATE_HEADERS = [
         'Final_FT_retrieval_order', 'original_order', 'unique_record_id', 'source_databases',
         'source_database_count', 'crossdb_dedup_method', 'PMID', 'PMCID', 'DOI',
@@ -289,9 +291,6 @@
         'Final_FT_priority_rank', 'Final_FT_priority_label'
     ];
 
-    // ============================================================
-    //  DOM 引用
-    // ============================================================
     const excelFileDom = document.getElementById('excelFile');
     const searchDom = document.getElementById('searchInput');
     const tableBody = document.getElementById('tableBody');
@@ -303,9 +302,6 @@
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    // ============================================================
-    //  工具函数：消息提示
-    // ============================================================
     function showMsg(text, className) {
         tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
         tipBox.classList.remove('hidden');
@@ -328,9 +324,6 @@
         el._timer = setTimeout(() => el.classList.remove('show'), 8000);
     }
 
-    // ============================================================
-    //  登录引导
-    // ============================================================
     function showLoginGuide() {
         showGlobalTip(`
             <strong>📚 川大图书馆登录指南</strong><br />
@@ -342,11 +335,7 @@
         `, false);
     }
 
-    // ============================================================
-    //  核心：构建川大图书馆检索链接
-    // ============================================================
     function buildScuSearchUrl(item) {
-        // 优先级1：DOI（使用 "DOI:" 前缀精确检索）
         if (item.doi && item.doi.toString().trim() !== '') {
             const doi = item.doi.toString().trim();
             return {
@@ -355,7 +344,6 @@
                 label: `DOI: ${doi}`
             };
         }
-        // 优先级2：PMID（使用 "PMID:" 前缀精确检索）
         if (item.pmid && item.pmid.toString().trim() !== '') {
             const pmid = item.pmid.toString().trim();
             return {
@@ -364,7 +352,6 @@
                 label: `PMID: ${pmid}`
             };
         }
-        // 优先级3：标题
         if (item.title && item.title.trim() !== '' && item.title !== '无标题') {
             return {
                 url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title.trim())}`,
@@ -372,7 +359,6 @@
                 label: `标题: ${item.title.trim().substring(0, 30)}...`
             };
         }
-        // 优先级4：外链
         if (item.url && item.url.trim() !== '' && item.url !== '无' && item.url !== '无外链') {
             return {
                 url: item.url.trim(),
@@ -380,7 +366,6 @@
                 label: '外链'
             };
         }
-        // 兜底
         return {
             url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title || '')}`,
             method: '标题检索(兜底)',
@@ -388,16 +373,12 @@
         };
     }
 
-    // ============================================================
-    //  单篇下载（无txt备份，仅toast提示）
-    // ============================================================
     function downloadLibDocById(id) {
         const data = literatureList.find(item => item.id === id);
         if (!data) {
             showMsg('未找到该文献', 'text-red-600 bg-red-50');
             return;
         }
-
         const result = buildScuSearchUrl(data);
         const confirmMsg =
             `即将跳转至川大图书馆「${result.method}」页面\n\n` +
@@ -406,16 +387,11 @@
             `⚠️ 请确保已登录川大图书馆（点击右上角按钮登录）\n` +
             `已登录用户可直接在结果页下载PDF\n\n` +
             `点击「确定」打开检索页面`;
-
         if (!confirm(confirmMsg)) return;
-
         window.open(result.url, '_blank');
         showGlobalTip(`✅ 已打开「${result.method}」页面，登录后即可下载PDF`, true);
     }
 
-    // ============================================================
-    //  批量下载
-    // ============================================================
     function batchOpenSelectedDocs() {
         if (selectedIds.size === 0) {
             showMsg('请先勾选需要下载的文献', 'text-red-600 bg-red-50');
@@ -423,7 +399,6 @@
         }
         const selectedList = literatureList.filter(item => selectedIds.has(item.id));
         if (selectedList.length === 0) return;
-
         const confirmMsg =
             `即将批量打开 ${selectedList.length} 篇文献的检索页面\n\n` +
             `检索优先级：DOI → PMID → 标题 → 外链\n` +
@@ -431,9 +406,7 @@
             `已登录用户可在每个页面直接下载PDF\n\n` +
             `浏览器可能拦截弹窗，请点击「允许」\n` +
             `点击「确定」开始批量打开`;
-
         if (!confirm(confirmMsg)) return;
-
         let openedCount = 0;
         selectedList.forEach((item, index) => {
             setTimeout(() => {
@@ -462,9 +435,6 @@
         showMsg('请先登录川大图书馆，再使用批量下载功能', 'text-amber-600 bg-amber-50');
     }
 
-    // ============================================================
-    //  下载导入模板
-    // ============================================================
     function downloadTemplate() {
         const emptyRow = {};
         TEMPLATE_HEADERS.forEach(h => emptyRow[h] = '');
@@ -481,9 +451,6 @@
         showMsg('模板下载成功，表头与系统标准模板完全一致', 'text-green-600 bg-green-50');
     }
 
-    // ============================================================
-    //  批量导出全部Excel
-    // ============================================================
     function batchExportAllExcel() {
         if (literatureList.length === 0) {
             showMsg('文献库暂无数据，无法批量导出', 'text-red-600 bg-red-50');
@@ -504,9 +471,6 @@
         showMsg(`批量导出成功，共${literatureList.length}条文献`, 'text-green-600 bg-green-50');
     }
 
-    // ============================================================
-    //  清空数据（带原生 confirm 确认弹窗）
-    // ============================================================
     function clearAllData() {
         if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
             localStorage.removeItem(STORAGE_KEY);
@@ -517,9 +481,6 @@
         }
     }
 
-    // ============================================================
-    //  渲染表格
-    // ============================================================
     function renderTable() {
         selectedIds.clear();
         checkAll.checked = false;
@@ -546,7 +507,10 @@
         pageData.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-gray-100';
-            // 修改：只显示值，不加标签（去掉了 <span class="badge-doi">DOI</span> 和 <span class="badge-pmid">PMID</span>）
+            // 外部链接列：只显示图标，去掉“外链”文字
+            const linkHtml = row.url && row.url.trim() !== '' && row.url !== '无' ?
+                `<a href="${row.url}" target="_blank" class="external-link-icon" title="打开外部链接"><i class="fa-solid fa-link"></i></a>` :
+                '—';
             tr.innerHTML = `
                 <td class="border border-gray-200 px-3 py-2 text-center">
                     <input type="checkbox" class="row-check cursor-pointer" data-id="${row.id}" />
@@ -556,9 +520,7 @@
                 <td class="border border-gray-200 px-3 py-2 text-green-600 text-xs">${row.pmid || '-'}</td>
                 <td class="border border-gray-200 px-3 py-2 text-sm">${row.title}</td>
                 <td class="border border-gray-200 px-3 py-2 text-sm">${row.author}</td>
-                <td class="border border-gray-200 px-3 py-2 text-center text-sm">
-                    ${row.url && row.url.trim() !== '' && row.url !== '无' ? `<a href="${row.url}" target="_blank" class="text-hospitalBlue hover:underline">外链</a>` : '—'}
-                </td>
+                <td class="border border-gray-200 px-3 py-2 text-center text-sm">${linkHtml}</td>
                 <td class="border border-gray-200 px-3 py-2 text-center">
                     <button class="download-btn bg-hospitalBlue text-white btn-normal hover:bg-blue-700 transition" data-id="${row.id}">
                         <i class="fa-solid fa-download mr-1"></i>下载
@@ -587,9 +549,6 @@
         }
     }
 
-    // ============================================================
-    //  Excel 导入 + 去重
-    // ============================================================
     excelFileDom.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -635,9 +594,6 @@
         e.target.value = '';
     });
 
-    // ============================================================
-    //  搜索 & 分页 事件绑定
-    // ============================================================
     searchDom.addEventListener('input', () => { currentPage = 1;
         renderTable(); });
     pageSizeSelect.addEventListener('change', () => {
@@ -655,7 +611,6 @@
             renderTable(); }
     });
 
-    // 事件委托：单篇下载
     tableBody.addEventListener('click', function(e) {
         const btn = e.target.closest('.download-btn');
         if (btn) {
@@ -664,9 +619,6 @@
         }
     });
 
-    // ============================================================
-    //  初始化：加载本地存储
-    // ============================================================
     window.onload = function() {
         const cacheData = localStorage.getItem(STORAGE_KEY);
         if (cacheData) {

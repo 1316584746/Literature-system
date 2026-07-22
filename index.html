@@ -49,45 +49,6 @@
         .btn-normal {
             @apply px-3 py-1 rounded text-xs whitespace-nowrap
         }
-        .login-badge {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 20px;
-            padding: 4px 16px;
-            font-size: 13px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #856404;
-        }
-        .login-badge.success {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-        .step-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #555;
-            flex-wrap: wrap;
-        }
-        .step-indicator .step {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: #f0f0f0;
-            padding: 2px 12px;
-            border-radius: 12px;
-        }
-        .step-indicator .step.active {
-            background: #0066B3;
-            color: #fff;
-        }
-        .step-indicator .arrow {
-            color: #bbb;
-        }
         .tip-fixed {
             position: fixed;
             bottom: 24px;
@@ -159,7 +120,6 @@
             </div>
             <div class="flex items-center gap-4 flex-wrap">
                 <span class="text-sm opacity-90 hidden sm:inline">科室共用｜上传自动去重｜本地永久存储</span>
-                <!-- 登录引导按钮（核心改进） -->
                 <a href="https://lib.scu.edu.cn" target="_blank"
                 class="bg-white text-hospitalBlue px-4 py-1.5 rounded-full text-sm font-medium hover:bg-gray-100 transition flex items-center gap-2 shadow">
                 <i class="fa-solid fa-arrow-right-to-bracket"></i>
@@ -172,16 +132,16 @@
 <!-- ===== MAIN ===== -->
 <main class="max-w-7xl mx-auto px-4 py-6">
 
-    <!-- 登录状态引导条 -->
+    <!-- 登录引导条 -->
     <div class="bg-white rounded-lg p-3 mb-4 card-shadow flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <i class="fa-regular fa-circle-check text-hospitalBlue text-xl"></i>
-            <div class="step-indicator">
-                <span class="step active"><i class="fa-regular fa-1"></i> 登录图书馆</span>
-                <span class="arrow">→</span>
-                <span class="step"><i class="fa-regular fa-2"></i> 检索文献</span>
-                <span class="arrow">→</span>
-                <span class="step"><i class="fa-regular fa-3"></i> 下载PDF</span>
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="bg-hospitalBlue text-white px-2 py-0.5 rounded-full text-xs">1</span> 登录图书馆
+                <span class="text-gray-300">→</span>
+                <span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">2</span> 检索文献
+                <span class="text-gray-300">→</span>
+                <span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">3</span> 下载PDF
             </div>
         </div>
         <div class="flex items-center gap-3 text-sm text-gray-600">
@@ -394,7 +354,7 @@
     }
 
     // ============================================================
-    //  核心：构建川大图书馆检索链接（改进版）
+    //  核心：构建川大图书馆检索链接
     // ============================================================
     function buildScuSearchUrl(item) {
         // 优先级1：DOI（使用 "DOI:" 前缀精确检索）
@@ -415,7 +375,7 @@
                 label: `PMID: ${pmid}`
             };
         }
-        // 优先级3：标题（使用标题全文检索）
+        // 优先级3：标题
         if (item.title && item.title.trim() !== '' && item.title !== '无标题') {
             return {
                 url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title.trim())}`,
@@ -423,7 +383,7 @@
                 label: `标题: ${item.title.trim().substring(0, 30)}...`
             };
         }
-        // 优先级4：外链（如果存在且有效）
+        // 优先级4：外链
         if (item.url && item.url.trim() !== '' && item.url !== '无' && item.url !== '无外链') {
             return {
                 url: item.url.trim(),
@@ -431,7 +391,7 @@
                 label: '外链'
             };
         }
-        // 兜底：用标题（即使为空也尝试）
+        // 兜底
         return {
             url: `https://lib.scu.edu.cn/Search/Index?searchWord=${encodeURIComponent(item.title || '')}`,
             method: '标题检索(兜底)',
@@ -440,7 +400,7 @@
     }
 
     // ============================================================
-    //  单篇下载（核心改进：登录引导 + 精准链接）
+    //  单篇下载（无txt备份，仅toast提示）
     // ============================================================
     function downloadLibDocById(id) {
         const data = literatureList.find(item => item.id === id);
@@ -449,7 +409,6 @@
             return;
         }
 
-        // 弹出登录确认
         const result = buildScuSearchUrl(data);
         const confirmMsg =
             `即将跳转至川大图书馆「${result.method}」页面\n\n` +
@@ -461,36 +420,12 @@
 
         if (!confirm(confirmMsg)) return;
 
-        // 打开检索页
         window.open(result.url, '_blank');
-
-        // 同时下载TXT备份（保留原有功能）
-        const txtContent =
-            `===== 四川大学儿科睡眠科室文献存档 =====\n` +
-            `唯一ID：${data.id}\n` +
-            `DOI：${data.doi || '无'}\n` +
-            `PMID：${data.pmid || '无'}\n` +
-            `第一作者：${data.author}\n` +
-            `文献标题：${data.title}\n` +
-            `外链：${data.url || '无'}\n` +
-            `本次检索方式：${result.method}\n` +
-            `检索链接：${result.url}\n` +
-            `四川大学图书馆：https://lib.scu.edu.cn`;
-
-        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-        const aDom = document.createElement('a');
-        aDom.href = URL.createObjectURL(blob);
-        aDom.download = `文献备份_${data.id}.txt`;
-        document.body.appendChild(aDom);
-        aDom.click();
-        document.body.removeChild(aDom);
-        URL.revokeObjectURL(aDom.href);
-
         showGlobalTip(`✅ 已打开「${result.method}」页面，登录后即可下载PDF`, true);
     }
 
     // ============================================================
-    //  批量下载（核心改进：登录引导 + 精准链接）
+    //  批量下载
     // ============================================================
     function batchOpenSelectedDocs() {
         if (selectedIds.size === 0) {
@@ -527,7 +462,6 @@
         });
     }
 
-    // 带登录引导的批量下载（先弹出登录提示）
     function batchOpenSelectedDocsWithLogin() {
         showGlobalTip(`
             <strong>🔑 批量下载前请先登录</strong><br />
@@ -536,8 +470,6 @@
             3. 系统将依次打开所有文献的检索页，<strong>登录状态下可直接下载PDF</strong><br />
             <span style="font-size:12px;color:#aaa;display:block;margin-top:4px;">💡 如已登录请忽略此提示，直接使用批量下载按钮</span>
         `, false);
-
-        // 同时高亮提示
         showMsg('请先登录川大图书馆，再使用批量下载功能', 'text-amber-600 bg-amber-50');
     }
 
@@ -584,7 +516,7 @@
     }
 
     // ============================================================
-    //  清空数据
+    //  清空数据（带原生 confirm 确认弹窗）
     // ============================================================
     function clearAllData() {
         if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
@@ -594,6 +526,7 @@
             renderTable();
             showMsg('本地文献库已全部清空', 'text-red-600 bg-red-50');
         }
+        // 如果用户点击取消，什么也不做
     }
 
     // ============================================================
@@ -710,7 +643,6 @@
             }
         };
         reader.readAsArrayBuffer(file);
-        // 清空input，允许重复上传同一文件
         e.target.value = '';
     });
 
@@ -763,7 +695,6 @@
             renderTable();
         }
 
-        // 自动显示一次登录提示（仅首次加载时）
         if (!sessionStorage.getItem('login_tip_shown')) {
             setTimeout(() => {
                 showGlobalTip(`

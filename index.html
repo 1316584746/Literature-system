@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>四川大学儿科睡眠科室文献管理系统</title>
+  <!-- Excel解析库 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Tailwind样式 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            hospitalBlue: '#0066B3',
+            hospitalLight: '#E6F1FB',
+            hospitalGray: '#F4F7FA',
+            hospitalText: '#23374D'
+          },
+          fontFamily: {
+            medical: ['Microsoft YaHei', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: "Microsoft YaHei"; background: #F4F7FA; }
+    .card-shadow { box-shadow: 0 2px 12px rgba(0, 102, 179, 0.08); }
+    .table-hover tr:hover { background-color: #E6F1FB; transition: 0.2s; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #0066B3; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- 顶部导航栏 -->
+  <header class="bg-hospitalBlue text-white px-6 py-4 shadow-md">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-hospital-user text-2xl"></i>
+        <h1 class="text-xl font-bold">四川大学儿科睡眠科室文献管理系统</h1>
+      </div>
+      <div class="text-sm opacity-9">科室共用｜上传自动去重｜本地永久存储</div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- 操作区域：导入、搜索、清空 -->
+    <section class="bg-white rounded-lg p-6 card-shadow mb-6">
+      <div class="grid md:grid-cols-3 gap-6 items-center">
+        <!-- Excel导入 -->
+        <div>
+          <label class="block font-medium text-hospitalText mb-2">
+            <i class="fa-solid fa-file-excel text-green-600 mr-2"></i>导入文献Excel
+          </label>
+          <input type="file" id="excelFile" accept=".xlsx,.xls" class="border border-gray-300 rounded px-3 py-2 w-full">
+          <p class="text-xs text-gray-500 mt-1">依据unique_record_id自动去重，重复条目直接跳过</p>
+        </div>
+        <!-- 标题模糊搜索 -->
+        <div>
+          <label class="block font-medium text-hospitalText mb-2">
+            <i class="fa-solid fa-magnifying-glass text-hospitalBlue mr-2"></i>标题模糊检索
+          </label>
+          <input 
+            id="searchInput" 
+            placeholder="输入文献标题任意关键词筛选..." 
+            class="border border-hospitalBlue rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-hospitalLight"
+          >
+        </div>
+        <!-- 清空本地数据 -->
+        <div class="flex items-end">
+          <button onclick="clearAllData()" class="bg-red-500 text-white w-full py-2 rounded hover:bg-red-600">
+            <i class="fa-solid fa-trash mr-2"></i>清空全部本地文献
+          </button>
+        </div>
+      </div>
+      <!-- 提示消息框 -->
+      <div id="tipBox" class="mt-4 hidden py-2 px-3 rounded"></div>
+    </section>
+
+    <!-- 文献表格列表 -->
+    <section class="bg-white rounded-lg p-6 card-shadow">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-hospitalText text-lg">科室文献总库 <span id="totalNum" class="text-hospitalBlue">(0篇)</span></h2>
+        <span class="text-xs text-orange-500">首次查看原文需登录川大图书馆，登录勾选「记住我」免重复登录</span>
+      </div>
+      <div class="overflow-x-auto table-hover">
+        <table class="w-full border-collapse text-sm">
+          <thead class="bg-hospitalLight">
+            <tr>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[12%]">唯一ID</th>
+              <th class="border border-gray-200 px-3 py-2 text-left w-[43%]">文献标题 Title</th>
+              <th class="border border-gray-200 px-3 py-2 w-[15%]">第一作者</th>
+              <th class="border border-gray-200 px-3 py-2 w-[15%]">外部链接</th>
+              <th class="border border-gray-200 px-3 py-2 w-[15%] text-center">操作</th>
+            </tr>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="5" class="text-center py-10 text-gray-400">
+                <i class="fa-solid fa-folder-open text-3xl block mb-2"></i>
+                暂无文献，请上传Excel文件
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-10 py-4 text-center text-gray-500 text-sm border-t">
+    无数据库纯静态系统｜部署于Vercel｜数据存储浏览器本地
+  </footer>
+
+  <script>
+    // 本地存储标识key
+    const STORAGE_KEY = 'ped_dept_literature';
+    // 全局文献数组
+    let literatureList = [];
+
+    // 页面加载自动读取本地缓存
+    window.onload = function () {
+      const cacheData = localStorage.getItem(STORAGE_KEY);
+      if (cacheData) {
+        literatureList = JSON.parse(cacheData);
+        renderTable();
+        showMsg(`成功加载本地文献库，共${literatureList}篇`, 'text-green-600 bg-green-5');
+      }
+    }
+
+    // Excel文件上传监听
+    const excelFileDom = document.getElementById('excelFile');
+    excelFileDom.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      showMsg('正在解析Excel，自动校验重复文献...', 'text-hospitalBlue bg-hospitalLight');
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        try {
+          const buffer = new Uint8Array(ev.target.result);
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rawData = XLSX.utils.sheet_to_json(sheet);
+
+          // 格式化每条数据，只保留需要的4个字段
+          const newBatch = rawData.map(item => ({
+            id: item.unique_record_id || '无',
+            title: item.Title || '无标题',
+            author: item.First_Author || '未知作者',
+            url: item.Identifier_URLs || ''
+          }));
+
+          // 查重核心：用Set存储已有ID快速匹配
+          const existIdSet = new Set(literatureList.map(item => item.id));
+          let addNum = 0;
+          let skipNum = 0;
+
+          // 循环比对，重复跳过，新数据加入
+          newBatch.forEach(item => {
+            if (!existIdSet.has(item.id)) {
+              literatureList.push(item);
+              existIdSet.add(item.id);
+              addNum++;
+            } else {
+              skipNum++;
+            }
+          })
+
+          // 更新本地持久化存储
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(literatureList));
+          // 展示上传统计
+          showMsg(`导入完成：新增${addNum}篇，重复跳过${skipNum}篇，当前总库${literatureList.length}篇`, 'text-green-600 bg-green-5');
+          renderTable();
+        } catch (err) {
+          showMsg('Excel解析失败，请检查文件格式是否标准', 'text-red-600 bg-red-5');
+          console.error(err);
+        }
+      }
+      reader.readAsArrayBuffer(file);
+    })
+
+    // 搜索框实时渲染
+    const searchDom = document.getElementById('searchInput');
+    searchDom.addEventListener('input', renderTable);
+
+    // 渲染表格函数
+    function renderTable() {
+      const keyword = searchDom.value.trim().toLowerCase();
+      // 模糊匹配标题
+      const filterData = literatureList.filter(row => row.title.toLowerCase().includes(keyword));
+      document.getElementById('totalNum').text = `(${filterData.length}篇)`;
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+
+      // 无数据空状态
+      if (filterData.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-10 text-gray-400">
+              <i class="fa-solid fa-magnifying-glass text-3xl block mb-2"></i>
+              ${literatureList.length === 0 ? '文献库为空，请上传Excel' : '未匹配到对应标题文献'}
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // 循环生成表格行
+      filterData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-100';
+        tr.innerHTML = `
+          <td class="border border-gray-200 px-3 py-2">${row.id}</td>
+          <td class="border border-gray-200 px-3 py-2">${row.title}</td>
+          <td class="border border-gray-200 px-3 py-2">${row.author}</td>
+          <td class="border border-gray-200 px-3 break-all py-2 text-blue-600">
+            ${row.url ? `<a href="${row.url}" target="_blank">外链</a>` : '无'}
+          </td>
+          <td class="border border-gray-200 px-3 py-2 text-center">
+            <button onclick="openLib('${encodeURIComponent(row.title)}')" class="bg-hospitalBlue text-white px-2 py-1 rounded text-xs mr-1">
+              <i class="fa-solid fa-book-open"></i>查看原文
+            </button>
+            <button onclick="exportTxt('${JSON.stringify(row).replace(/'/g, "\\'")}')" class="bg-gray-500 text-white px-2 py-1 rounded text-xs">
+              <i class="fa-solid fa-download"></i>导出信息
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      })
+    }
+
+    // 跳转川大图书馆检索
+    window.openLib = function (titleEncode) {
+      const libUrl = `https://lib.scu.edu.cn/Search/Index?searchWord=${titleEncode}`;
+      window.open(lib, '_blank');
+    }
+
+    // 单条导出txt文件
+    window.exportTxt = function (rawStr) {
+      const data = JSON.parse(rawStr);
+      const content = `=====科室文献存档=====
+唯一ID：${data.id}
+第一作者：${data.author}
+文献标题：${data.title}
+外部链接：${data.url || "无链接"}
+四川大学儿科睡眠科室文献库`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const aTag = document.createElement('a');
+      aTag.href = URL.createObjectURL(blob);
+      aTag.download = `文献_${data.id}.txt`;
+      aTag.click();
+      URL.revokeObjectURL(aTag);
+    }
+
+    // 清空全部本地数据
+    window.clearAllData = function () {
+      if (confirm('确认删除当前浏览器内所有科室文献？删除后无法恢复！')) {
+        localStorage.remove(STORAGE_KEY);
+        literatureList = [];
+        renderTable();
+        showMsg('本地文献库已全部清空', 'text-red-600 bg-red-5');
+      }
+    }
+
+    // 提示消息工具函数
+    function showMsg(text, className) {
+      const tipBox = document.getElementById('tipBox');
+      tipBox.className = `mt-4 py-2 px-3 rounded ${className}`;
+      tipBox.classList.remove('hidden');
+      setTimeout(() => tipBox.classList.add('hidden'), 4000);
+    }
+  </script>
+</body>
+</html>
